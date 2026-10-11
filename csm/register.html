@@ -1,0 +1,199 @@
+<!DOCTYPE html><html lang="en"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Registration - NGI Hostel Management</title>
+    <link rel="stylesheet" href="style.css">
+</head><body><header>
+    <h1>Nehru Group of Institutions</h1>
+    <p>Student Registration</p>
+</header><main><h2>Create Your Account</h2>
+
+<form id="registerForm">
+
+    <label for="studentId">Student ID:</label><br>
+    <input type="text" id="studentId" name="studentId"
+           placeholder="Example: STU001"
+           pattern="STU[0-9]{3}"
+           title="Enter an ID such as STU001"
+           required>
+    <br><br>
+
+    <label for="name">Student Name:</label><br>
+    <input type="text" id="name" name="name"
+           placeholder="Enter your full name" required>
+    <br><br>
+
+    <label for="dob">Date of Birth:</label><br>
+    <input type="date" id="dob" name="dob" required>
+    <br><br>
+
+    <label for="department">Department:</label><br>
+    <select id="department" name="department" required>
+        <option value="">Select Department</option>
+        <option value="Computer Science Engineering">Computer Science Engineering</option>
+        <option value="Information Technology">Information Technology</option>
+        <option value="Electronics and Communication Engineering">Electronics and Communication Engineering</option>
+        <option value="Electrical and Electronics Engineering">Electrical and Electronics Engineering</option>
+        <option value="Mechanical Engineering">Mechanical Engineering</option>
+        <option value="Civil Engineering">Civil Engineering</option>
+        <option value="Artificial Intelligence and Data Science">Artificial Intelligence and Data Science</option>
+    </select>
+    <br><br>
+
+    <label for="year">College Year:</label><br>
+    <select id="year" name="year" required>
+        <option value="">Select College Year</option>
+        <option value="1st Year">1st Year</option>
+        <option value="2nd Year">2nd Year</option>
+        <option value="3rd Year">3rd Year</option>
+        <option value="4th Year">4th Year</option>
+    </select>
+    <br><br>
+
+<label for="academicYear">Academic Year</label>
+<select id="academicYear" name="academicYear" required>
+    <option value="">Select Academic Year</option>
+    <option value="2001-2004">2001–2004</option>
+    <option value="2005-2008">2005–2008</option>
+    <option value="2009-2012">2009–2012</option>
+    <option value="2013-2016">2013–2016</option>
+    <option value="2017-2020">2017–2020</option>
+    <option value="2021-2024">2021–2024</option>
+    <option value="2025-2028">2025–2028</option>
+    <option value="2029-2032">2029–2032</option>
+</select>
+    <br><br>
+
+    <label for="roomNumber">Room Number:</label><br>
+    <select id="roomNumber" name="roomNumber" required>
+        <option value="">Select Room Number</option>
+        <option value="101">101</option>
+        <option value="102">102</option>
+        <option value="103">103</option>
+        <option value="104">104</option>
+        <option value="201">201</option>
+        <option value="202">202</option>
+        <option value="203">203</option>
+        <option value="204">204</option>
+        <option value="301">301</option>
+        <option value="302">302</option>
+        <option value="303">303</option>
+        <option value="304">304</option>
+    </select>
+    <br><br>
+
+    <label for="email">Email Address:</label><br>
+    <input type="email" id="email" name="email"
+           placeholder="Enter your email" required>
+    <br><br>
+
+    <label for="phone">Phone Number:</label><br>
+    <input type="tel" id="phone" name="phone"
+           pattern="[0-9]{10}" maxlength="10"
+           placeholder="10-digit phone number"
+           title="Enter a 10-digit phone number" required>
+    <br><br>
+
+    <label for="username">Username:</label><br>
+    <input type="text" id="username" name="username"
+           minlength="3"
+           placeholder="Create a username" required>
+    <br><br>
+
+    <label for="password">Password:</label><br>
+    <input type="password" id="password" name="password"
+           minlength="8"
+           placeholder="Create a password" required>
+    <br>
+
+    <input type="checkbox" id="showPassword">
+    <label for="showPassword">Show Password</label>
+    <br><br>
+
+    <button type="submit">Register</button>
+
+</form>
+
+<p>Already registered?
+    <a href="login.html">Login here</a>
+</p>
+
+<p id="message" role="status"></p>
+
+</main><script>
+    const form = document.getElementById("registerForm");
+    const message = document.getElementById("message");
+
+    document.getElementById("showPassword").addEventListener("change", function () {
+        document.getElementById("password").type =
+            this.checked ? "text" : "password";
+    });
+
+    form.addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        const student = {
+            studentId: document.getElementById("studentId").value.trim().toUpperCase(),
+            name: document.getElementById("name").value.trim(),
+            dob: document.getElementById("dob").value,
+            department: document.getElementById("department").value,
+            year: document.getElementById("year").value,
+            academicYear: document.getElementById("academicYear").value,
+            roomNumber: document.getElementById("roomNumber").value,
+            email: document.getElementById("email").value.trim().toLowerCase(),
+            phone: document.getElementById("phone").value.trim(),
+            username: document.getElementById("username").value.trim(),
+            password: document.getElementById("password").value
+        };
+
+        message.textContent = "Registering...";
+
+        try {
+            const response = await fetch("http://127.0.0.1:5000/api/register", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    student_id: student.studentId,
+                    name: student.name,
+                    email: student.email,
+                    username: student.username,
+                    password: student.password
+                })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                message.textContent = result.message;
+                return;
+            }
+
+            // Keep the existing student details available to your pages.
+            let users = JSON.parse(
+                localStorage.getItem("hostelUsers") || "[]"
+            );
+
+            users = users.filter(function (user) {
+                return user.username.toLowerCase() !==
+                    student.username.toLowerCase();
+            });
+
+            users.push(student);
+            localStorage.setItem("hostelUsers", JSON.stringify(users));
+
+            message.textContent =
+                "Registration successful! Redirecting to login...";
+
+            form.reset();
+
+            window.location.href="./login.html";
+
+        } catch (error) {
+            message.textContent =
+                "Cannot connect to the backend. Please check that Flask is running.";
+        }
+    });
+</script></body>
+</html>

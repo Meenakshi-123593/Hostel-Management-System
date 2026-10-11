@@ -1,0 +1,125 @@
+<!DOCTYPE html><html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hostel Portal Login</title>
+    <link rel="stylesheet" href="style.css">
+</head><body class="login-page"><div class="login-container"><div class="login-brand">
+    <div class="login-logo">NGI</div>
+    <h1>Nehru Group of Institutions</h1>
+    <p>Coimbatore, Tamil Nadu</p>
+</div>
+
+<div class="login-card">
+    <h2>Login</h2>
+    <p class="login-subtitle">Access your Hostel Portal</p>
+
+    <form id="loginForm">
+
+        <div class="login-field">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username"
+                   placeholder="Enter your username" required>
+        </div>
+
+        <div class="login-field">
+            <label for="password">Password</label>
+
+            <div class="password-wrapper">
+                <input type="password" id="password" name="password"
+                       placeholder="Enter your password" required>
+
+                <button type="button" id="toggleBtn"
+                        class="show-password">Show</button>
+            </div>
+        </div>
+
+        <button type="submit" class="login-button">Login</button>
+
+    </form>
+
+    <p id="message" role="status"></p>
+
+    <p class="register-text">
+        New user? <a href="register.html">Create an account</a>
+    </p>
+
+    <a href="index.html" class="login-home">Back to Home</a>
+</div>
+
+</div><script>
+    // Show or hide password
+    document.getElementById("toggleBtn").addEventListener("click", function () {
+        const password = document.getElementById("password");
+
+        if (password.type === "password") {
+            password.type = "text";
+            this.textContent = "Hide";
+        } else {
+            password.type = "password";
+            this.textContent = "Show";
+        }
+    });
+
+    // Login using the Flask backend
+    document.getElementById("loginForm").addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        const username = document.getElementById("username").value.trim();
+        const password = document.getElementById("password").value;
+        const message = document.getElementById("message");
+
+        message.textContent = "Checking login details...";
+
+        try {
+            const response = await fetch("http://127.0.0.1:5000/api/login", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    username: username,
+                    password: password
+                })
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                message.textContent = "Login successful!";
+
+                sessionStorage.setItem("loggedInUser", result.student.username);
+
+                // Keep existing student details available to your pages
+                let users = JSON.parse(
+                    localStorage.getItem("hostelUsers") || "[]"
+                );
+
+                const registeredUser = users.find(function (user) {
+                    return user.username.toLowerCase() ===
+                        result.student.username.toLowerCase();
+                });
+
+                if (registeredUser) {
+                    sessionStorage.setItem(
+                        "loggedInStudent",
+                        JSON.stringify(registeredUser)
+                    );
+                }
+
+                setTimeout(function () {
+                    window.location.href = "dashboard.html";
+                }, 800);
+
+            } else {
+                message.textContent =
+                    result.message || "Invalid username or password.";
+            }
+
+        } catch (error) {
+            message.textContent =
+                "Cannot connect to the backend. Please check that Flask is running.";
+        }
+    });
+</script></body>
+</html>

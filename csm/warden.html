@@ -1,0 +1,71 @@
+<!DOCTYPE html><html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warden Details</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body><header>
+    <h1>Hostel Management System</h1>
+    <p>Warden Management</p>
+</header><main>
+    <h2>Select a Warden</h2><div class="warden-list">
+    <button onclick="showWarden(0)">Anjali Nair</button>
+    <button onclick="showWarden(1)">Priya Menon</button>
+    <button onclick="showWarden(2)">Divya Raj</button>
+    <button onclick="showWarden(3)">Lakshmi Das</button>
+</div>
+
+<div id="wardenDetails" class="panel">
+    <p>Select a warden's name to view their details.</p>
+</div>
+
+<button onclick="location.href='dashboard.html'">
+    Back to Dashboard
+</button>
+
+</main><script>
+const wardens = [
+    {
+        name: "Anjali Nair",
+        phone: "9000000001",
+        floor: "First Floor",
+        duty: "Morning and evening supervision",
+        rooms: "101–110"
+    },
+    {
+        name: "Priya Menon",
+        phone: "9000000002",
+        floor: "Second Floor",
+        duty: "Student attendance and room supervision",
+        rooms: "201–210"
+    },
+    {
+        name: "Divya Raj",
+        phone: "9000000003",
+        floor: "Third Floor",
+        duty: "Student safety and complaint handling",
+        rooms: "301–310"
+    },
+    {
+        name: "Lakshmi Das",
+        phone: "9000000004",
+        floor: "Ground Floor",
+        duty: "Outpass verification and visitor supervision",
+        rooms: "001–010"
+    }
+];
+
+function showWarden(index) {
+    const warden = wardens[index];
+
+    document.getElementById("wardenDetails").innerHTML = `
+        <h2>${warden.name}</h2>
+        <p><strong>Phone:</strong> ${warden.phone}</p>
+        <p><strong>Assigned Floor:</strong> ${warden.floor}</p>
+        <p><strong>Duty:</strong> ${warden.duty}</p>
+        <p><strong>Rooms:</strong> ${warden.rooms}</p>
+    `;
+}
+</script></body>
+</html>

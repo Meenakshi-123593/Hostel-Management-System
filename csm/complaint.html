@@ -1,0 +1,97 @@
+<!DOCTYPE html><html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hostel Complaints</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body><header>
+    <h1>Hostel Management System</h1>
+    <p>Complaint Management</p>
+</header><main>
+    <h2>Raise a Complaint</h2><form id="complaintForm">
+    <label for="studentName">Student Name:</label>
+    <input id="studentName" required>
+
+    <label for="roomNumber">Room Number:</label>
+    <input id="roomNumber" required>
+
+    <label for="category">Complaint Category:</label>
+    <select id="category" required>
+        <option value="">Select Category</option>
+        <option>Room Maintenance</option>
+        <option>Food Quality</option>
+        <option>Water Supply</option>
+        <option>Cleanliness</option>
+        <option>Electricity</option>
+        <option>Other</option>
+    </select>
+
+    <label for="description">Complaint Description:</label>
+    <textarea id="description" rows="4" required></textarea>
+
+    <button type="submit">Submit Complaint</button>
+    <p id="complaintMessage"></p>
+</form>
+
+<section class="panel">
+    <h2>Complaint History</h2>
+    <div id="complaintHistory">No complaints submitted yet.</div>
+</section>
+
+<button onclick="location.href='dashboard.html'">
+    Back to Dashboard
+</button>
+
+</main><script>
+function getComplaints() {
+    return JSON.parse(localStorage.getItem("hostelComplaints") || "[]");
+}
+
+document.getElementById("complaintForm").addEventListener("submit", function(event) {
+    event.preventDefault();
+
+    const complaint = {
+        student: document.getElementById("studentName").value,
+        room: document.getElementById("roomNumber").value,
+        category: document.getElementById("category").value,
+        description: document.getElementById("description").value,
+        date: new Date().toLocaleDateString(),
+        status: "Pending"
+    };
+
+    const records = getComplaints();
+    records.push(complaint);
+    localStorage.setItem("hostelComplaints", JSON.stringify(records));
+
+    document.getElementById("complaintMessage").textContent =
+        "Complaint submitted successfully in this browser.";
+
+    this.reset();
+    showComplaints();
+});
+
+function showComplaints() {
+    const records = getComplaints();
+    const history = document.getElementById("complaintHistory");
+
+    if (records.length === 0) {
+        history.textContent = "No complaints submitted yet.";
+        return;
+    }
+
+    history.innerHTML = records.slice().reverse().map(record => `
+        <div class="record">
+            <h3>${record.category}</h3>
+            <p><strong>Student:</strong> ${record.student}</p>
+            <p><strong>Room:</strong> ${record.room}</p>
+            <p><strong>Description:</strong> ${record.description}</p>
+            <p><strong>Date:</strong> ${record.date}</p>
+            <p><strong>Status:</strong> ${record.status}</p>
+        </div>
+    `).join("");
+}
+
+showComplaints();
+</script></body>
+</html>

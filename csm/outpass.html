@@ -1,0 +1,101 @@
+<!DOCTYPE html><html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Outpass Management</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body><header>
+    <h1>Hostel Management System</h1>
+    <p>Outpass Application</p>
+</header><main>
+    <h2>Apply for Outpass</h2><form id="outpassForm">
+    <label for="studentName">Student Name:</label>
+    <input id="studentName" required>
+
+    <label for="studentPassword">Password:</label>
+    <input id="studentPassword" type="password" required>
+
+    <label for="room">Room Number:</label>
+    <input id="room" required>
+
+    <label for="reason">Reason:</label>
+    <textarea id="reason" rows="3" required></textarea>
+
+    <label for="departure">Departure Date and Time:</label>
+    <input id="departure" type="datetime-local" required>
+
+    <label for="returnDate">Expected Return Date and Time:</label>
+    <input id="returnDate" type="datetime-local" required>
+
+    <button type="submit">Submit Outpass</button>
+    <p id="outpassMessage"></p>
+</form>
+
+<section class="panel">
+    <h2>Monthly Outpass Summary</h2>
+    <label for="month">Select Month:</label>
+    <input id="month" type="month">
+    <button onclick="showMonthlyCount()">Check Count</button>
+    <p id="monthlyCount">Outpasses submitted in this browser: 0</p>
+</section>
+
+<button onclick="location.href='dashboard.html'">
+    Back to Dashboard
+</button>
+
+</main><script>
+function getOutpasses() {
+    return JSON.parse(localStorage.getItem("hostelOutpasses") || "[]");
+}
+
+document.getElementById("outpassForm").addEventListener("submit", function(event) {
+    event.preventDefault();
+
+    const departure = document.getElementById("departure").value;
+    const returnDate = document.getElementById("returnDate").value;
+
+    if (new Date(returnDate) <= new Date(departure)) {
+        document.getElementById("outpassMessage").textContent =
+            "Return time must be after departure time.";
+        return;
+    }
+
+    const records = getOutpasses();
+
+    records.push({
+        name: document.getElementById("studentName").value,
+        room: document.getElementById("room").value,
+        reason: document.getElementById("reason").value,
+        departure: departure,
+        returnDate: returnDate,
+        submittedAt: new Date().toISOString(),
+        status: "Pending"
+    });
+
+    localStorage.setItem("hostelOutpasses", JSON.stringify(records));
+
+    document.getElementById("outpassMessage").textContent =
+        "Outpass request submitted. Status: Pending approval.";
+
+    this.reset();
+    showMonthlyCount();
+});
+
+function showMonthlyCount() {
+    const month = document.getElementById("month").value ||
+        new Date().toISOString().slice(0, 7);
+
+    document.getElementById("month").value = month;
+
+    const count = getOutpasses().filter(record =>
+        record.departure.slice(0, 7) === month
+    ).length;
+
+    document.getElementById("monthlyCount").textContent =
+        "Outpasses for " + month + ": " + count;
+}
+
+showMonthlyCount();
+</script></body>
+</html>

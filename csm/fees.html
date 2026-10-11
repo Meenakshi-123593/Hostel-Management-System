@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hostel Fees Details</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="fees-page">
+
+    <header class="room-header">
+        <h1>Hostel Fees Details</h1>
+        <p>Nehru Group of Institutions | Student Hostel Portal</p>
+    </header>
+
+    <a href="dashboard.html" class="back-link">← Back to Dashboard</a>
+
+    <main class="fees-content">
+
+        <h2 class="page-title">Year-wise Fee Payment</h2>
+
+        <p id="studentInfo"></p>
+
+        <section class="fees-summary">
+            <div class="fees-summary-card">
+                <h3>Total Course Fees</h3>
+                <strong id="totalFees">₹0</strong>
+            </div>
+
+            <div class="fees-summary-card">
+                <h3>Total Paid</h3>
+                <strong id="totalPaid">₹0</strong>
+            </div>
+
+            <div class="fees-summary-card">
+                <h3>Outstanding Balance</h3>
+                <strong id="totalBalance">₹0</strong>
+            </div>
+        </section>
+
+        <section class="fees-table-container">
+            <h2>Fee Payment Details</h2>
+
+            <table class="fees-table">
+                <thead>
+                    <tr>
+                        <th>College Year</th>
+                        <th>Total Fees</th>
+                        <th>Amount Paid</th>
+                        <th>Balance</th>
+                        <th>Payment Status</th>
+                    </tr>
+                </thead>
+
+                <tbody id="feesTableBody"></tbody>
+            </table>
+
+            <p class="fees-note">
+                Note: These are sample fee records for demonstration.
+            </p>
+        </section>
+
+    </main>
+
+    <script>
+        const loggedInUsername = sessionStorage.getItem("loggedInUser");
+
+        const users = JSON.parse(
+            localStorage.getItem("hostelUsers") || "[]"
+        );
+
+        const student = users.find(user =>
+            user.username.toLowerCase() ===
+            (loggedInUsername || "").toLowerCase()
+        );
+
+        if (!student) {
+            document.getElementById("studentInfo").textContent =
+                "Please log in to view your fee details.";
+
+            setTimeout(() => {
+                window.location.href = "login.html";
+            }, 1200);
+
+        } else {
+
+            const currentYear = parseInt(student.year, 10);
+            const yearlyFee = 300000;
+
+            document.getElementById("studentInfo").textContent =
+                "Student: " + student.name +
+                " | Student ID: " + student.studentId +
+                " | College Year: " + student.year;
+
+            if (![1, 2, 3, 4].includes(currentYear)) {
+                document.getElementById("feesTableBody").innerHTML =
+                    '<tr><td colspan="5">Invalid college year. Please check registration.</td></tr>';
+
+            } else {
+
+                let totalPaid = 0;
+                let totalBalance = 0;
+                let tableHTML = "";
+
+                for (let year = 1; year <= 4; year++) {
+
+                    let paid = 0;
+                    let status = "Not Due Yet";
+
+                    if (year < currentYear) {
+                        paid = yearlyFee;
+                        status = "Fully Paid";
+                    } else if (year === currentYear) {
+
+                        if (currentYear === 3) {
+                            paid = 150000;
+                            status = "Partially Paid";
+                        } else if (currentYear === 4) {
+                            paid = 150000;
+                            status = "Partially Paid";
+                        } else {
+                            paid = yearlyFee;
+                            status = "Fully Paid";
+                        }
+                    }
+
+                    const balance = yearlyFee - paid;
+
+                    totalPaid += paid;
+                    totalBalance += balance;
+
+                    let statusClass = "fee-not-started";
+
+                    if (status === "Fully Paid") {
+                        statusClass = "fee-paid";
+                    } else if (status === "Partially Paid") {
+                        statusClass = "fee-pending";
+                    }
+
+                    tableHTML += `
+                        <tr>
+                            <td>${year}${getOrdinal(year)} Year</td>
+                            <td>${formatRupees(yearlyFee)}</td>
+                            <td>${formatRupees(paid)}</td>
+                            <td>${formatRupees(balance)}</td>
+                            <td>
+                                <span class="${statusClass}">
+                                    ${status}
+                                </span>
+                            </td>
+                        </tr>
+                    `;
+                }
+
+                document.getElementById("feesTableBody").innerHTML =
+                    tableHTML;
+
+                document.getElementById("totalFees").textContent =
+                    formatRupees(currentYear * yearlyFee);
+
+                document.getElementById("totalPaid").textContent =
+                    formatRupees(totalPaid);
+
+                document.getElementById("totalBalance").textContent =
+                    formatRupees(totalBalance);
+            }
+        }
+
+        function formatRupees(amount) {
+            return "₹" + amount.toLocaleString("en-IN");
+        }
+
+        function getOrdinal(number) {
+            const ordinals = {
+                1: "st",
+                2: "nd",
+                3: "rd",
+                4: "th"
+            };
+
+            return ordinals[number] || "th";
+        }
+    </script>
+
+</body>
+</html>

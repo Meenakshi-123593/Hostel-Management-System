@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hostel Attendance</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+    <h1>Hostel Management System</h1>
+    <nav><a href="dashboard.html">Back to Dashboard</a></nav>
+</header>
+
+<main>
+    <section class="panel">
+        <h2>Student Attendance</h2>
+
+        <form id="attendanceForm">
+            <label for="student">Student Name:</label>
+            <input type="text" id="student" required>
+
+            <label for="room">Room Number:</label>
+            <input type="text" id="room" required>
+
+            <label for="date">Date:</label>
+            <input type="date" id="date" required>
+
+            <label for="session">Session:</label>
+            <select id="session" required>
+                <option value="">Select Session</option>
+                <option value="Morning">Morning</option>
+                <option value="Evening">Evening</option>
+            </select>
+
+            <label for="status">Attendance Status:</label>
+            <select id="status" required>
+                <option value="">Select Status</option>
+                <option value="Present">Present</option>
+                <option value="Absent">Absent</option>
+            </select>
+
+            <button type="submit">Submit Attendance</button>
+        </form>
+    </section>
+
+    <section class="panel">
+        <h2>Attendance Records</h2>
+        <div id="attendanceRecords">
+            <p>No attendance records yet.</p>
+        </div>
+    </section>
+</main>
+
+<script>
+const attendanceForm = document.getElementById("attendanceForm");
+const attendanceRecords = document.getElementById("attendanceRecords");
+
+function displayAttendance() {
+    const records = JSON.parse(
+        localStorage.getItem("hostelAttendance") || "[]"
+    );
+
+    attendanceRecords.innerHTML = "";
+
+    if (records.length === 0) {
+        attendanceRecords.innerHTML = "<p>No attendance records yet.</p>";
+        return;
+    }
+
+    records.forEach(function(record) {
+        const div = document.createElement("div");
+        div.className = "record";
+
+        const details = document.createElement("p");
+        details.textContent =
+            "Student: " + record.student +
+            " | Room: " + record.room +
+            " | Date: " + record.date +
+            " | Session: " + record.session +
+            " | Status: " + record.status;
+
+        div.appendChild(details);
+        attendanceRecords.appendChild(div);
+    });
+}
+
+attendanceForm.addEventListener("submit", function(event) {
+    event.preventDefault();
+
+    const student = document.getElementById("student").value.trim();
+    const room = document.getElementById("room").value.trim();
+    const date = document.getElementById("date").value;
+    const session = document.getElementById("session").value;
+    const status = document.getElementById("status").value;
+
+    if (!student || !room || !date || !session || !status) {
+        alert("Please fill in all fields.");
+        return;
+    }
+
+    try {
+        const records = JSON.parse(
+            localStorage.getItem("hostelAttendance") || "[]"
+        );
+
+        records.push({ student, room, date, session, status });
+
+        localStorage.setItem("hostelAttendance", JSON.stringify(records));
+
+        alert("Attendance saved successfully!");
+
+        attendanceForm.reset();
+        displayAttendance();
+
+    } catch (error) {
+        alert("Unable to save attendance. Please check your browser storage.");
+        console.error(error);
+    }
+});
+
+displayAttendance();
+</script>
+
+</body>
+</html>

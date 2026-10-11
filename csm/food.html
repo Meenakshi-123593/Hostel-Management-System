@@ -1,0 +1,104 @@
+<!DOCTYPE html><html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hostel Food Menu</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body><header>
+    <h1>Hostel Management System</h1>
+    <p>Weekly Food Menu</p>
+</header><main>
+    <h2>Select Food Category</h2><div class="food-options">
+    <button onclick="showMenu('Breakfast')">Breakfast</button>
+    <button onclick="showMenu('Lunch')">Lunch</button>
+    <button onclick="showMenu('Snacks')">Snacks</button>
+    <button onclick="showMenu('Dinner')">Dinner</button>
+</div>
+
+<div class="panel">
+    <label for="day">Select Day:</label>
+    <select id="day" onchange="updateMenu()">
+        <option>Sunday</option>
+        <option>Monday</option>
+        <option>Tuesday</option>
+        <option>Wednesday</option>
+        <option>Thursday</option>
+        <option>Friday</option>
+        <option>Saturday</option>
+    </select>
+
+    <h2 id="menuTitle">Select a food category</h2>
+    <p id="menuDetails">Your selected day's menu will appear here.</p>
+</div>
+
+<button onclick="location.href='dashboard.html'">
+    Back to Dashboard
+</button>
+
+</main><script>
+let selectedCategory = "";
+
+const menu = {
+    Breakfast: {
+        Sunday: "Puttu and Kadala Curry",
+        Monday: "Idli and Sambar",
+        Tuesday: "Dosa and Chutney",
+        Wednesday: "Upma and Banana",
+        Thursday: "Poori and Potato Curry",
+        Friday: "Pongal and Sambar",
+        Saturday: "Appam and Vegetable Stew"
+    },
+    Lunch: {
+        Sunday: "Rice, Sambar, Avial and Payasam",
+        Monday: "Rice, Sambar and Vegetable Thoran",
+        Tuesday: "Rice, Fish Curry and Vegetables",
+        Wednesday: "Rice, Rasam and Cabbage Thoran",
+        Thursday: "Rice, Sambar and Avial",
+        Friday: "Rice, Fish Curry and Vegetables",
+        Saturday: "Rice, Sambar and Pickle"
+    },
+    Snacks: {
+        Sunday: "Tea and Banana Fritters",
+        Monday: "Tea and Biscuits",
+        Tuesday: "Juice and Sandwich",
+        Wednesday: "Tea and Samosa",
+        Thursday: "Milk and Cake",
+        Friday: "Tea and Puffs",
+        Saturday: "Juice and Cutlet"
+    },
+    Dinner: {
+        Sunday: "Chapati and Vegetable Curry",
+        Monday: "Dosa and Sambar",
+        Tuesday: "Vegetable Fried Rice",
+        Wednesday: "Chapati and Dal",
+        Thursday: "Idiyappam and Curry",
+        Friday: "Rice and Chicken Curry",
+        Saturday: "Appam and Egg Curry"
+    }
+};
+
+function showMenu(category) {
+    selectedCategory = category;
+    updateMenu();
+}
+
+function updateMenu() {
+    const day = document.getElementById("day").value;
+
+    if (!selectedCategory) {
+        document.getElementById("menuTitle").textContent =
+            "Select a food category";
+        document.getElementById("menuDetails").textContent =
+            "Choose Breakfast, Lunch, Snacks or Dinner.";
+        return;
+    }
+
+    document.getElementById("menuTitle").textContent =
+        selectedCategory + " - " + day;
+
+    document.getElementById("menuDetails").textContent =
+        menu[selectedCategory][day];
+}
+</script></body>
+</html>
