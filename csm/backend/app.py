@@ -126,6 +126,8 @@ def login():
         connection.close()
 
 
+# Create the database table when the application starts
+create_table()
+
 if __name__ == "__main__":
-    create_table()
     app.run(debug=True)
