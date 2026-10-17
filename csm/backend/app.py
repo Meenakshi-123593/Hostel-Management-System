@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 import sqlite3
 import os
 from werkzeug.security import generate_password_hash, check_password_hash
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 
 app = Flask(__name__)
 
@@ -9,13 +10,21 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATABASE = os.path.join(BASE_DIR, "hostel.db")
 
 
+# ---------------- CORS ----------------
+
 @app.after_request
 def add_cors_headers(response):
     response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = (
+        "Content-Type, Authorization"
+    )
+    response.headers["Access-Control-Allow-Methods"] = (
+        "GET, POST, OPTIONS"
+    )
     return response
 
+
+# ---------------- DATABASE ----------------
 
 def get_db():
     connection = sqlite3.connect(DATABASE)
@@ -52,8 +61,12 @@ def create_table():
         }
 
         for column in [
-            "dob", "department", "year",
-            "academic_year", "room_number", "phone"
+            "dob",
+            "department",
+            "year",
+            "academic_year",
+            "room_number",
+            "phone"
         ]:
             if column not in columns:
                 connection.execute(
@@ -66,6 +79,62 @@ def create_table():
         connection.close()
 
 
+# ---------------- TOKEN SECURITY ----------------
+
+def get_serializer():
+    secret = os.environ.get("ADMIN_TOKEN_SECRET")
+
+    if not secret:
+        return None
+
+    return URLSafeTimedSerializer(
+        secret,
+        salt="hostel-admin-auth"
+    )
+
+
+def require_admin():
+    serializer = get_serializer()
+
+    if serializer is None:
+        return None, (
+            jsonify({
+                "success": False,
+                "message": "Admin token secret is not configured."
+            }),
+            503
+        )
+
+    authorization = request.headers.get("Authorization", "")
+    parts = authorization.split(" ", 1)
+
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        return None, (
+            jsonify({
+                "success": False,
+                "message": "Admin login required."
+            }),
+            401
+        )
+
+    token = parts[1].strip()
+
+    try:
+        data = serializer.loads(token, max_age=3600)
+        return data, None
+
+    except (BadSignature, SignatureExpired):
+        return None, (
+            jsonify({
+                "success": False,
+                "message": "Invalid or expired admin session. Please log in again."
+            }),
+            401
+        )
+
+
+# ---------------- HOME ----------------
+
 @app.route("/", methods=["GET"])
 def home():
     return jsonify({
@@ -73,6 +142,8 @@ def home():
         "status": "Backend is running successfully"
     })
 
+
+# ---------------- STUDENT REGISTRATION ----------------
 
 @app.route("/api/register", methods=["POST", "OPTIONS"])
 def register():
@@ -146,6 +217,8 @@ def register():
         connection.close()
 
 
+# ---------------- STUDENT LOGIN ----------------
+
 @app.route("/api/login", methods=["POST", "OPTIONS"])
 def login():
     if request.method == "OPTIONS":
@@ -195,7 +268,7 @@ def login():
         }), 401
 
     except sqlite3.Error:
-        app.logger.exception("Login database error")
+        app.logger.exception("Student login database error")
         return jsonify({
             "success": False,
             "message": "A database error occurred."
@@ -205,8 +278,111 @@ def login():
         connection.close()
 
 
+# ---------------- ADMIN LOGIN ----------------
+
+@app.route("/api/admin/login", methods=["POST", "OPTIONS"])
+def admin_login():
+    if request.method == "OPTIONS":
+        return jsonify({"message": "OK"}), 200
+
+    data = request.get_json(silent=True) or {}
+
+    username = str(data.get("username", "")).strip()
+    password = data.get("password", "")
+
+    if not username or not password:
+        return jsonify({
+            "success": False,
+            "message": "Enter admin username and password."
+        }), 400
+
+    admin_username = os.environ.get("ADMIN_USERNAME")
+    admin_password = os.environ.get("ADMIN_PASSWORD")
+    serializer = get_serializer()
+
+    if not all([admin_username, admin_password, serializer]):
+        return jsonify({
+            "success": False,
+            "message": "Admin configuration is incomplete on the server."
+        }), 503
+
+    if username != admin_username or password != admin_password:
+        return jsonify({
+            "success": False,
+            "message": "Invalid admin username or password."
+        }), 401
+
+    token = serializer.dumps({
+        "username": admin_username,
+        "role": "admin"
+    })
+
+    return jsonify({
+        "success": True,
+        "message": "Admin login successful.",
+        "token": token
+    }), 200
+
+
+# ---------------- ADMIN: VIEW STUDENTS ----------------
+
+@app.route("/api/admin/students", methods=["GET", "OPTIONS"])
+def admin_students():
+    if request.method == "OPTIONS":
+        return jsonify({"message": "OK"}), 200
+
+    admin, error = require_admin()
+
+    if error:
+        return error
+
+    if admin.get("role") != "admin":
+        return jsonify({
+            "success": False,
+            "message": "Admin access required."
+        }), 403
+
+    connection = get_db()
+
+    try:
+        rows = connection.execute("""
+            SELECT
+                student_id,
+                name,
+                email,
+                username,
+                dob,
+                department,
+                year,
+                academic_year,
+                room_number,
+                phone
+            FROM students
+            ORDER BY id DESC
+        """).fetchall()
+
+        students = [dict(row) for row in rows]
+
+        return jsonify({
+            "success": True,
+            "count": len(students),
+            "students": students
+        }), 200
+
+    except sqlite3.Error:
+        app.logger.exception("Admin students database error")
+        return jsonify({
+            "success": False,
+            "message": "Unable to retrieve student records."
+        }), 500
+
+    finally:
+        connection.close()
+
+
+# ---------------- START APPLICATION ----------------
+
 create_table()
 
-
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=False)
