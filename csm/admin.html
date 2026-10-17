@@ -3,120 +3,189 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hostel Administration Portal</title>
+    <title>Admin Dashboard</title>
     <link rel="stylesheet" href="style.css">
 </head>
+<body>
 
-<body class="admin-page">
-
-<header class="admin-header">
-    <h1>Hostel Administration Portal</h1>
-    <p>Manage Hostel Operations and Student Information</p>
+<header>
+    <h1>Nehru Group of Institutions</h1>
+    <p>Hostel Management System — Admin Portal</p>
 </header>
 
-<main class="admin-main">
-    <h2>Welcome, Administrator</h2>
-    <p>View student information registered in the hostel portal.</p>
+<main class="login-container">
+    <h2>Admin Dashboard</h2>
+    <div id="adminLoginSection">
+    <h3>Admin Login</h3>
 
-    <section class="admin-student-section">
-        <h2>Student Details</h2>
+    <form id="adminLoginForm">
+        <label for="adminUsername">Username</label>
+        <input type="text" id="adminUsername"
+               placeholder="Enter admin username" required>
 
-        <div class="admin-student-card">
-            <div class="admin-student-photo">
-                <img src="student.jpg" alt="Student Photo">
-            </div>
+        <label for="adminPassword">Password</label>
+        <input type="password" id="adminPassword"
+               placeholder="Enter admin password" required>
 
-            <div class="admin-student-info">
-                <h3>Student Information</h3>
+        <button type="submit">Login</button>
+    </form>
 
-                <p><strong>Student ID:</strong> <span id="studentId">Loading...</span></p>
-                <p><strong>Student Name:</strong> <span id="studentName">Loading...</span></p>
-                <p><strong>Date of Birth:</strong> <span id="studentDob">Loading...</span></p>
-                <p><strong>Department:</strong> <span id="studentDepartment">Loading...</span></p>
-                <p><strong>College Year:</strong> <span id="studentYear">Loading...</span></p>
-                <p><strong>Academic Year:</strong> <span id="studentAcademicYear">Loading...</span></p>
-                <p><strong>Room Number:</strong> <span id="studentRoom">Loading...</span></p>
-                <p><strong>Email:</strong> <span id="studentEmail">Loading...</span></p>
-                <p><strong>Phone Number:</strong> <span id="studentPhone">Loading...</span></p>
-                <p><strong>Username:</strong> <span id="studentUsername">Loading...</span></p>
-            </div>
-        </div>
-
-        <p id="adminMessage" role="status"></p>
+    <p id="loginMessage"></p>
+</div>
+    <p>Welcome, Administrator!</p>
+     <div id="adminDashboard"></div>
+    <section>
+        <h3>Student Records</h3>
+        <p>View registered students and their details.</p>
+        <button id="viewStudents">View Student Records</button>
+        <p id="message"></p>
     </section>
 
-    <br>
+    <div id="studentRecords"></div>
 
-    <button onclick="location.href='dashboard.html'">
-        Back to Dashboard
-    </button>
-
-    <button onclick="logout()">
-        Logout
-    </button>
+    <button id="logout">Logout</button>
 </main>
 
 <script>
-    const message = document.getElementById("adminMessage");
+const API_URL = "https://hostel-management-system-6626.onrender.com";
 
-    let student = null;
+const loginForm = document.getElementById("adminLoginForm");
+const loginSection = document.getElementById("adminLoginSection");
+const dashboard = document.getElementById("adminDashboard");
+const loginMessage = document.getElementById("loginMessage");
+
+async function loadStudentRecords() {
+    const message = document.getElementById("message");
+    const records = document.getElementById("studentRecords");
+    const token = sessionStorage.getItem("adminToken");
+
+    records.replaceChildren();
+
+    if (!token) {
+        message.textContent = "Please log in first.";
+        return;
+    }
+
+    message.textContent = "Loading student records...";
 
     try {
-        student = JSON.parse(
-            sessionStorage.getItem("loggedInStudent") ||
-            localStorage.getItem("currentUser") ||
-            "null"
-        );
+        const response = await fetch(`${API_URL}/api/admin/students`, {
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            message.textContent = result.message || "Unable to load records.";
+            return;
+        }
+
+        if (!result.students || result.students.length === 0) {
+            message.textContent = "No registered students found.";
+            return;
+        }
+
+        const table = document.createElement("table");
+        const headings = [
+            "Student ID", "Name", "Email", "Username",
+            "Department", "Year", "Academic Year", "Room", "Phone"
+        ];
+
+        const header = document.createElement("tr");
+
+        headings.forEach(text => {
+            const th = document.createElement("th");
+            th.textContent = text;
+            header.appendChild(th);
+        });
+
+        table.appendChild(header);
+
+        result.students.forEach(student => {
+            const row = document.createElement("tr");
+
+            [
+                "student_id", "name", "email", "username",
+                "department", "year", "academic_year",
+                "room_number", "phone"
+            ].forEach(key => {
+                const cell = document.createElement("td");
+                cell.textContent = student[key] || "-";
+                row.appendChild(cell);
+            });
+
+            table.appendChild(row);
+        });
+
+        records.appendChild(table);
+        message.textContent =
+            `Total registered students: ${result.count}`;
+
     } catch (error) {
-        student = null;
+        message.textContent = "Connection failed. Please try again.";
     }
+}
 
-    if (!student) {
-        message.textContent = "Please log in to view student details.";
+loginForm.addEventListener("submit", async function(event) {
+    event.preventDefault();
 
-        setTimeout(function () {
-            window.location.href = "login.html";
-        }, 1500);
-    } else {
-        document.getElementById("studentId").textContent =
-            student.student_id || student.studentId || "Not provided";
+    loginMessage.textContent = "Checking login details...";
 
-        document.getElementById("studentName").textContent =
-            student.name || "Not provided";
+    const username = document.getElementById("adminUsername").value.trim();
+    const password = document.getElementById("adminPassword").value;
 
-        document.getElementById("studentDob").textContent =
-            student.dob || "Not provided";
+    try {
+        const response = await fetch(`${API_URL}/api/admin/login`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ username, password })
+        });
 
-        document.getElementById("studentDepartment").textContent =
-            student.department || "Not provided";
+        const result = await response.json();
 
-        document.getElementById("studentYear").textContent =
-            student.year || "Not provided";
+        if (!response.ok || !result.success) {
+            loginMessage.textContent =
+                result.message || "Login failed.";
+            return;
+        }
 
-        document.getElementById("studentAcademicYear").textContent =
-            student.academic_year || student.academicYear || "Not provided";
+        sessionStorage.setItem("adminToken", result.token);
 
-        document.getElementById("studentRoom").textContent =
-            student.room_number || student.roomNumber || "Not assigned";
+        loginSection.style.display = "none";
+        dashboard.style.display = "block";
 
-        document.getElementById("studentEmail").textContent =
-            student.email || "Not provided";
+        loginMessage.textContent = "";
 
-        document.getElementById("studentPhone").textContent =
-            student.phone || "Not provided";
+        await loadStudentRecords();
 
-        document.getElementById("studentUsername").textContent =
-            student.username || "Not provided";
-
-        message.textContent = "Student details loaded successfully.";
+    } catch (error) {
+        loginMessage.textContent =
+            "Connection failed. Please try again.";
     }
+});
 
-    function logout() {
-        sessionStorage.removeItem("loggedInUser");
-        sessionStorage.removeItem("loggedInStudent");
-        localStorage.removeItem("currentUser");
-        window.location.href = "login.html";
-    }
+document.getElementById("viewStudents").addEventListener(
+    "click",
+    loadStudentRecords
+);
+
+document.getElementById("logout").addEventListener("click", function() {
+    sessionStorage.removeItem("adminToken");
+    window.location.reload();
+});
+
+if (sessionStorage.getItem("adminToken")) {
+    loginSection.style.display = "none";
+    dashboard.style.display = "block";
+    loadStudentRecords();
+} else {
+    loginSection.style.display = "block";
+    dashboard.style.display = "none";
+}
 </script>
 
 </body>
