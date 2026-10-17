@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login | NGI Hostel Management System</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #101b3f, #263e73);
+            padding: 20px;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 430px;
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 35px;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
+        }
+
+        .logo {
+            width: 75px;
+            height: 75px;
+            margin: 0 auto 15px;
+            border-radius: 50%;
+            background: #17264d;
+            color: #ff9f1c;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 27px;
+            font-weight: bold;
+        }
+
+        h1 {
+            text-align: center;
+            color: #17264d;
+            font-size: 25px;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #687086;
+            font-size: 14px;
+            margin-bottom: 28px;
+            line-height: 1.5;
+        }
+
+        label {
+            display: block;
+            margin: 16px 0 7px;
+            color: #252d42;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        input {
+            width: 100%;
+            padding: 13px;
+            border: 1px solid #ccd2df;
+            border-radius: 8px;
+            font-size: 15px;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: #263e73;
+            box-shadow: 0 0 0 3px rgba(38, 62, 115, 0.12);
+        }
+
+        button {
+            width: 100%;
+            margin-top: 24px;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            background: #17264d;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #263e73;
+        }
+
+        button:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
+        }
+
+        #message {
+            display: none;
+            margin-top: 16px;
+            padding: 12px;
+            border-radius: 7px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .error {
+            display: block !important;
+            color: #9d1c1c;
+            background: #fff0f0;
+        }
+
+        .success {
+            display: block !important;
+            color: #176b36;
+            background: #eaf8ee;
+        }
+
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 22px;
+            color: #263e73;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .security-note {
+            text-align: center;
+            margin-top: 20px;
+            color: #7b8292;
+            font-size: 12px;
+        }
+    </style>
+</head>
+
+<body>
+    <main class="login-container">
+        <div class="logo">NGI</div>
+
+        <h1>Admin Login</h1>
+
+        <p class="subtitle">
+            Nehru Group of Institutions<br>
+            Hostel Management System
+        </p>
+
+        <form id="adminLoginForm">
+            <label for="username">Admin Username</label>
+            <input
+                type="text"
+                id="username"
+                name="username"
+                placeholder="Enter admin username"
+                autocomplete="username"
+                required
+            >
+
+            <label for="password">Admin Password</label>
+            <input
+                type="password"
+                id="password"
+                name="password"
+                placeholder="Enter admin password"
+                autocomplete="current-password"
+                required
+            >
+
+            <button type="submit" id="loginButton">
+                Login to Admin Portal
+            </button>
+
+            <div id="message" role="alert"></div>
+        </form>
+
+        <a href="index.html" class="back-link">
+            ← Back to Home
+        </a>
+
+        <p class="security-note">
+            Authorized administrators only.
+        </p>
+    </main>
+
+    <script>
+        const API_BASE =
+            "https://hostel-management-system-api-426c.onrender.com";
+
+        const form = document.getElementById("adminLoginForm");
+        const message = document.getElementById("message");
+        const button = document.getElementById("loginButton");
+
+        form.addEventListener("submit", async function (event) {
+            event.preventDefault();
+
+            message.className = "";
+            message.textContent = "";
+            button.disabled = true;
+            button.textContent = "Signing in...";
+
+            const username =
+                document.getElementById("username").value.trim();
+
+            const password =
+                document.getElementById("password").value;
+
+            try {
+                const response = await fetch(
+                    API_BASE + "/api/admin/login",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            username: username,
+                            password: password
+                        })
+                    }
+                );
+
+                const result = await response.json();
+
+                if (!response.ok || result.success !== true) {
+                    throw new Error(
+                        result.message || result.error ||
+                        "Admin login failed. Check your credentials."
+                    );
+                }
+
+                const token = result.token || result.access_token;
+
+                if (!token) {
+                    throw new Error(
+                        "The backend did not return an admin token. " +
+                        "Check the Flask admin-login API."
+                    );
+                }
+
+                sessionStorage.setItem("adminToken", token);
+                sessionStorage.setItem("adminUsername", username);
+
+                message.textContent = "Login successful. Opening dashboard...";
+                message.className = "success";
+
+                window.location.href = "admin.html";
+
+            } catch (error) {
+                message.textContent =
+                    error.message ||
+                    "Cannot connect to the server. Please try again.";
+
+                message.className = "error";
+            } finally {
+                button.disabled = false;
+                button.textContent = "Login to Admin Portal";
+            }
+        });
+    </script>
+</body>
+</html>
