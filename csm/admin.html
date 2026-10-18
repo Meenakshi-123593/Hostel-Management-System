@@ -4,311 +4,408 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NGI Hostel Management - Admin Dashboard</title>
+
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial,sans-serif;background:#f3f6fb;color:#263247}
-header{background:#12366b;color:white;padding:20px;text-align:center}
-main{max-width:1250px;margin:22px auto;padding:0 14px}
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px}
-.card,section{background:white;border-radius:10px;padding:16px;margin-bottom:18px;box-shadow:0 2px 8px #00000010}
-.card{text-align:center;font-weight:bold}
-.number{font-size:25px;color:#12366b;margin-top:8px}
-h2{font-size:20px;margin-top:0}
-button,select,input{padding:9px;border-radius:5px;border:1px solid #ccd5e2;margin:3px}
-button{background:#174b91;color:white;border:0;cursor:pointer}
-button.green{background:#18864b}
-button.red{background:#b42318}
-.tablewrap{overflow-x:auto}
-table{border-collapse:collapse;width:100%;min-width:700px}
-th,td{padding:9px;border:1px solid #dce3ed;text-align:left;font-size:13px;vertical-align:top}
-th{background:#eaf0f8}
-.status{padding:10px;background:#eef4ff;border-radius:5px;margin:10px 0}
-.error{color:#b42318}
-.actions{min-width:190px}
+header{background:#12366b;color:white;padding:22px;text-align:center}
+header h1{margin:0 0 8px}
+header button{background:white;color:#12366b}
+main{max-width:1200px;margin:22px auto;padding:0 14px}
+section{background:white;padding:18px;margin-bottom:22px;border-radius:10px;box-shadow:0 2px 9px #00000012;overflow-x:auto}
+h2{color:#12366b;margin-top:0}
+button{border:0;border-radius:5px;padding:9px 12px;cursor:pointer;background:#12366b;color:white;margin:3px}
+button.green{background:#16834a}
+button.red{background:#c83232}
+button.gray{background:#667085}
+input,select{padding:8px;border:1px solid #cbd5e1;border-radius:5px;max-width:100%}
+table{width:100%;border-collapse:collapse;margin-top:12px;min-width:650px}
+th,td{padding:10px;border:1px solid #e1e7ef;text-align:left;vertical-align:top}
+th{background:#eaf0fa}
+.message{padding:12px;background:#fff4d6;border-radius:6px;margin-top:10px}
+.actions{white-space:nowrap}
+.small{font-size:13px;color:#667085}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 </style>
 </head>
+
 <body>
 <header>
 <h1>NGI Hostel Management System</h1>
 <p>Administrator Dashboard</p>
+<button onclick="loadDashboard()">Refresh All Sections</button>
+<button onclick="logout()">Logout</button>
 </header>
 
 <main>
-<div class="cards">
-<div class="card">Registered Students<div class="number" id="studentCount">—</div></div>
-<div class="card">Outpass Applications<div class="number" id="outpassCount">—</div></div>
-<div class="card">Complaints<div class="number" id="complaintCount">—</div></div>
-<div class="card">Attendance Records<div class="number" id="attendanceCount">—</div></div>
-<div class="card">Fee Records<div class="number" id="feeCount">—</div></div>
-</div>
+<section>
+<h2>Dashboard Summary</h2>
+<div id="summary">Loading summary...</div>
+</section>
 
 <section>
 <h2>Registered Students</h2>
-<button onclick="loadDashboard()">Refresh Dashboard</button>
-<div id="studentStatus" class="status">Loading...</div>
-<div class="tablewrap"><table>
-<thead><tr><th>Student ID</th><th>Name</th><th>Email</th><th>Department</th><th>Year</th><th>Room</th></tr></thead>
-<tbody id="students"></tbody>
-</table></div>
+<button onclick="loadStudents()">Refresh Students</button>
+<div id="students">Loading student records...</div>
 </section>
 
 <section>
 <h2>Outpass Applications</h2>
-<div id="outpassStatus" class="status">Loading...</div>
-<div class="tablewrap"><table>
-<thead><tr><th>ID</th><th>Student ID</th><th>Name</th><th>Reason</th><th>Destination</th><th>From</th><th>To</th><th>Status</th><th>Action</th></tr></thead>
-<tbody id="outpasses"></tbody>
-</table></div>
+<button onclick="loadOutpasses()">Refresh Outpasses</button>
+<div id="outpasses">Loading outpass applications...</div>
 </section>
 
 <section>
-<h2>Student Complaints — Full Details</h2>
-<div id="complaintStatus" class="status">Loading...</div>
-<div class="tablewrap"><table>
-<thead><tr><th>ID</th><th>Student ID</th><th>Name</th><th>Category</th><th>Description</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>
-<tbody id="complaints"></tbody>
-</table></div>
+<h2>Student Complaints</h2>
+<button onclick="loadComplaints()">Refresh Complaints</button>
+<div id="complaints">Loading complaints...</div>
 </section>
 
 <section>
-<h2>Attendance</h2>
+<h2>Attendance Management</h2>
+<div class="toolbar">
 <label for="attendanceDate">Date:</label>
 <input type="date" id="attendanceDate">
-<button onclick="loadAttendance()">Load Date</button>
-<div id="attendanceStatus" class="status">Loading...</div>
-<div class="tablewrap"><table>
-<thead><tr><th>Student ID</th><th>Name</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>
-<tbody id="attendance"></tbody>
-</table></div>
+<button onclick="loadAttendance()">Load Attendance</button>
+</div>
+<p class="small">Select Present, Absent, or Leave for each student, then save.</p>
+<div id="attendance">Loading attendance...</div>
 </section>
 
 <section>
-<h2>Fees</h2>
-<div id="feeStatus" class="status">Loading...</div>
-<div class="tablewrap"><table>
-<thead><tr><th>Student ID</th><th>Name</th><th>Total Fees</th><th>Paid</th><th>Balance</th><th>Status</th><th>Update Fees</th></tr></thead>
-<tbody id="fees"></tbody>
-</table></div>
+<h2>Hostel Fee Management</h2>
+<button onclick="loadFees()">Refresh Fees</button>
+<p class="small">Enter the total fee and amount paid, then save each student's record.</p>
+<div id="fees">Loading fee records...</div>
 </section>
 </main>
 
 <script>
-const API="https://hostel-management-system-api-426c.onrender.com";
+const API = "https://hostel-management-system-api-426c.onrender.com";
+
+const $ = id => document.getElementById(id);
 
 function getToken(){
-  const keys=["adminToken","admin_token","admin_token_key","token","authToken","access_token"];
-  for(const store of [localStorage,sessionStorage]){
+    const keys = ["adminToken","admin_token","admin_token_key","token","authToken"];
     for(const key of keys){
-      const value=store.getItem(key);
-      if(value && value!=="undefined" && value!=="null") return value;
+        const value = localStorage.getItem(key) || sessionStorage.getItem(key);
+        if(value) return value;
     }
-  }
-  return "";
+    return "";
 }
 
-function esc(value){
-  return String(value??"").replace(/[&<>"']/g,c=>({
-    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-  }[c]));
+function escapeHTML(value){
+    return String(value ?? "").replace(/[&<>"']/g, ch => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[ch]));
 }
 
-async function api(path,options={}){
-  const headers={"Content-Type":"application/json",...(options.headers||{})};
-  const token=getToken();
-  if(token) headers.Authorization="Bearer "+token;
+async function api(path, options = {}){
+    const headers = {"Content-Type":"application/json", ...(options.headers || {})};
+    const token = getToken();
+    if(token) headers.Authorization = "Bearer " + token;
 
-  const response=await fetch(API+path,{...options,headers});
-  const raw=await response.text();
-  let data;
-  try{data=JSON.parse(raw)}catch(e){
-    throw new Error("Invalid server response ("+response.status+")");
-  }
-  if(!response.ok) throw new Error(data.message||data.error||"Request failed ("+response.status+")");
-  return data;
+    const response = await fetch(API + path, {...options, headers});
+    const text = await response.text();
+
+    let data;
+    try { data = text ? JSON.parse(text) : {}; }
+    catch { throw new Error("The server returned an invalid response."); }
+
+    if(!response.ok){
+        throw new Error(data.message || data.error || ("Request failed: " + response.status));
+    }
+    if(data.success === false){
+        throw new Error(data.message || data.error || "Request failed.");
+    }
+    return data;
 }
 
-function showError(id,error){
-  document.getElementById(id).innerHTML=
-    '<span class="error">'+esc(error.message)+
-    (error.message.includes("401")?
-    ' — Please log in to the admin portal again.':'')+'</span>';
+function showError(id, error){
+    $(id).innerHTML = '<div class="message">Unable to load this section: ' +
+        escapeHTML(error.message || error) +
+        '<br><button onclick="loadDashboard()">Try Again</button></div>';
 }
 
-function dateToday(){
-  const d=new Date();
-  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+function getArray(data, names){
+    for(const name of names){
+        if(Array.isArray(data[name])) return data[name];
+    }
+    return [];
 }
 
-document.getElementById("attendanceDate").value=dateToday();
+function noRecords(message){
+    return '<p>' + escapeHTML(message) + '</p>';
+}
+
+function makeTable(headers, rows){
+    if(!rows.length) return noRecords("No records found.");
+    return '<table><thead><tr>' +
+        headers.map(h => '<th>' + h + '</th>').join("") +
+        '</tr></thead><tbody>' + rows.join("") +
+        '</tbody></table>';
+}
+
+function cell(value){
+    return '<td>' + escapeHTML(value ?? "—") + '</td>';
+}
 
 async function loadStudents(){
-  const status=document.getElementById("studentStatus");
-  status.textContent="Loading...";
-  try{
-    const data=await api("/api/admin/students");
-    const rows=data.students||[];
-    document.getElementById("studentCount").textContent=rows.length;
-    document.getElementById("students").innerHTML=rows.length?rows.map(s=>
-      "<tr><td>"+esc(s.student_id)+"</td><td>"+esc(s.name)+"</td><td>"+
-      esc(s.email)+"</td><td>"+esc(s.department)+"</td><td>"+
-      esc(s.year||s.academic_year)+"</td><td>"+esc(s.room_number)+"</td></tr>"
-    ).join(""):'<tr><td colspan="6">No registered students found.</td></tr>';
-    status.textContent="Loaded "+rows.length+" student(s).";
-  }catch(e){showError("studentStatus",e)}
+    $("students").innerHTML = "Loading student records...";
+    try{
+        const data = await api("/api/admin/students");
+        const list = getArray(data, ["students","records","data"]);
+        $("students").innerHTML = makeTable(
+            ["Student ID","Name","Email","Department","Year","Room"],
+            list.map(s => '<tr>' +
+                cell(s.student_id) + cell(s.name) + cell(s.email) +
+                cell(s.department) + cell(s.year) + cell(s.room_number) +
+            '</tr>')
+        );
+    }catch(e){ showError("students", e); }
 }
 
 async function loadOutpasses(){
-  const status=document.getElementById("outpassStatus");
-  status.textContent="Loading...";
-  try{
-    const data=await api("/api/admin/outpasses");
-    const rows=data.outpasses||[];
-    document.getElementById("outpassCount").textContent=rows.length;
-    document.getElementById("outpasses").innerHTML=rows.length?rows.map(r=>{
-      const actions=r.status==="Pending"?
-        '<button class="green" onclick="updateOutpass('+Number(r.id)+',\'Approved\')">Approve</button>'+
-        '<button class="red" onclick="updateOutpass('+Number(r.id)+',\'Rejected\')">Reject</button>':'—';
-      return "<tr><td>"+esc(r.id)+"</td><td>"+esc(r.student_id)+"</td><td>"+
-        esc(r.student_name)+"</td><td>"+esc(r.reason)+"</td><td>"+
-        esc(r.destination)+"</td><td>"+esc(r.from_date)+"</td><td>"+
-        esc(r.to_date)+"</td><td>"+esc(r.status)+"</td><td>"+actions+"</td></tr>";
-    }).join(""):'<tr><td colspan="9">No outpass applications submitted.</td></tr>';
-    status.textContent="Loaded "+rows.length+" application(s).";
-  }catch(e){showError("outpassStatus",e)}
+    $("outpasses").innerHTML = "Loading outpass applications...";
+    try{
+        const data = await api("/api/admin/outpasses");
+        const list = getArray(data, ["outpasses","applications","records","data"]);
+        $("outpasses").innerHTML = makeTable(
+            ["Student","Student ID","Reason","Destination","From","To","Status","Action"],
+            list.map(p => {
+                const id = Number(p.id);
+                const status = String(p.status || "Pending");
+                const buttons = status.toLowerCase() === "pending"
+                    ? '<button class="green" onclick="updateOutpass('+id+',\'Approved\')">Approve</button>' +
+                      '<button class="red" onclick="updateOutpass('+id+',\'Rejected\')">Reject</button>'
+                    : escapeHTML(status);
+                return '<tr>' +
+                    cell(p.student_name) + cell(p.student_id) + cell(p.reason) +
+                    cell(p.destination) + cell(p.from_date) + cell(p.to_date) +
+                    cell(status) + '<td class="actions">'+buttons+'</td></tr>';
+            })
+        );
+    }catch(e){ showError("outpasses", e); }
 }
 
-async function updateOutpass(id,statusValue){
-  if(!confirm("Change outpass status to "+statusValue+"?"))return;
-  try{
-    await api("/api/admin/outpasses/"+id+"/status,{
-      method:"POST",body:JSON.stringify({status:statusValue})
-    });
-    await loadOutpasses();
-  }catch(e){alert(e.message)}
+async function updateOutpass(id, status){
+    if(!confirm("Change this outpass status to " + status + "?")) return;
+    try{
+        await api("/api/admin/outpasses/" + id + "/status", {
+            method:"POST",
+            body:JSON.stringify({status})
+        });
+        await loadOutpasses();
+        await loadSummary();
+    }catch(e){ alert("Could not update outpass: " + e.message); }
 }
 
 async function loadComplaints(){
-  const status=document.getElementById("complaintStatus");
-  status.textContent="Loading...";
-  try{
-    const data=await api("/api/admin/complaints");
-    const rows=data.complaints||[];
-    document.getElementById("complaintCount").textContent=rows.length;
-    document.getElementById("complaints").innerHTML=rows.length?rows.map(r=>{
-      const options=["Pending","In Progress","Resolved","Rejected"].map(x=>
-        '<option value="'+x+'" '+(r.status===x?"selected":"")+'>'+x+'</option>'
-      ).join("");
-      return "<tr><td>"+esc(r.id)+"</td><td>"+esc(r.student_id)+"</td><td>"+
-        esc(r.student_name)+"</td><td>"+esc(r.category)+"</td><td>"+
-        esc(r.description)+"</td><td>"+esc(r.created_at)+"</td><td>"+
-        esc(r.status)+"</td><td><select id='complaint-"+Number(r.id)+"'>"+
-        options+"</select><button onclick='updateComplaint("+Number(r.id)+")'>Save</button></td></tr>";
-    }).join(""):'<tr><td colspan="8">No complaints submitted.</td></tr>';
-    status.textContent="Loaded "+rows.length+" complaint(s).";
-  }catch(e){showError("complaintStatus",e)}
+    $("complaints").innerHTML = "Loading complaints...";
+    try{
+        const data = await api("/api/admin/complaints");
+        const list = getArray(data, ["complaints","records","data"]);
+        $("complaints").innerHTML = makeTable(
+            ["Student","Student ID","Category","Full Description","Date","Status","Update"],
+            list.map(c => {
+                const id = Number(c.id);
+                const status = String(c.status || "Pending");
+                return '<tr>' +
+                    cell(c.student_name) + cell(c.student_id) + cell(c.category) +
+                    cell(c.description) + cell(c.created_at) +
+                    '<td><select id="complaint-status-'+id+'">' +
+                    ["Pending","In Progress","Resolved","Rejected"].map(s =>
+                        '<option '+(s===status?'selected':'')+'>'+s+'</option>'
+                    ).join("") +
+                    '</select></td>' +
+                    '<td><button onclick="updateComplaint('+id+')">Save</button></td>' +
+                    '</tr>';
+            })
+        );
+    }catch(e){ showError("complaints", e); }
 }
 
 async function updateComplaint(id){
-  const statusValue=document.getElementById("complaint-"+id).value;
-  try{
-    await api("/api/admin/complaints/"+id+"/status",{
-      method:"POST",body:JSON.stringify({status:statusValue})
-    });
-    await loadComplaints();
-    alert("Complaint status updated.");
-  }catch(e){alert(e.message)}
+    const status = $("complaint-status-" + id).value;
+    try{
+        await api("/api/admin/complaints/" + id + "/status", {
+            method:"POST",
+            body:JSON.stringify({status})
+        });
+        alert("Complaint status updated.");
+        await loadComplaints();
+        await loadSummary();
+    }catch(e){ alert("Could not update complaint: " + e.message); }
+}
+
+function selectedStatus(current){
+    const statuses = ["Not Marked","Present","Absent","Leave"];
+    return '<select class="attendance-status">' +
+        statuses.map(s => '<option '+(s===current?'selected':'')+'>'+s+'</option>').join("") +
+        '</select>';
 }
 
 async function loadAttendance(){
-  const status=document.getElementById("attendanceStatus");
-  status.textContent="Loading...";
-  const selectedDate=document.getElementById("attendanceDate").value||dateToday();
-  try{
-    const data=await api("/api/admin/attendance?date="+encodeURIComponent(selectedDate));
-    const rows=data.attendance||[];
-    document.getElementById("attendanceCount").textContent=rows.length;
-    document.getElementById("attendance").innerHTML=rows.length?rows.map(r=>{
-      const id=String(r.student_id);
-      const options=["Present","Absent","Leave"].map(x=>
-        '<option value="'+x+'" '+(r.status===x?"selected":"")+'>'+x+'</option>'
-      ).join("");
-      return "<tr><td>"+esc(r.student_id)+"</td><td>"+esc(r.student_name)+
-        "</td><td>"+esc(r.attendance_date)+"</td><td>"+esc(r.status)+
-        "</td><td><select id='att-"+esc(id)+"'>"+options+
-        "</select><button onclick='saveAttendance(\""+esc(id)+"\")'>Save</button></td></tr>";
-    }).join(""):'<tr><td colspan="5">No registered students found.</td></tr>';
-    status.textContent="Showing "+rows.length+" registered student(s) for "+selectedDate+
-      ". Attendance marked: "+(data.marked_count||0)+".";
-  }catch(e){showError("attendanceStatus",e)}
+    $("attendance").innerHTML = "Loading attendance...";
+    try{
+        const date = $("attendanceDate").value;
+        const [studentData, attendanceData] = await Promise.all([
+            api("/api/admin/students"),
+            api("/api/admin/attendance" + (date ? "?date="+encodeURIComponent(date) : ""))
+        ]);
+
+        const students = getArray(studentData, ["students","records","data"]);
+        const records = getArray(attendanceData, ["attendance","records","data"]);
+
+        const byStudent = {};
+        records.forEach(r => {
+            const key = String(r.student_id ?? "");
+            byStudent[key] = r;
+        });
+
+        if(!students.length){
+            $("attendance").innerHTML = noRecords("No registered students found.");
+            return;
+        }
+
+        const rows = students.map(s => {
+            const key = String(s.student_id ?? "");
+            const record = byStudent[key];
+            const status = record ? (record.status || "Not Marked") : "Not Marked";
+            return '<tr data-student-id="'+escapeHTML(key)+'">' +
+                cell(key) + cell(s.name) + cell(s.department) + cell(s.year) +
+                '<td>'+selectedStatus(status)+'</td>' +
+                '<td><button class="green" onclick="saveAttendance(this)">Save</button></td>' +
+                '</tr>';
+        });
+
+        $("attendance").innerHTML =
+            '<p>Registered students: '+students.length+'</p>' +
+            makeTable(["Student ID","Name","Department","Year","Attendance","Action"], rows);
+    }catch(e){ showError("attendance", e); }
 }
 
-async function saveAttendance(studentId){
-  const selectedDate=document.getElementById("attendanceDate").value||dateToday();
-  const statusValue=document.getElementById("att-"+studentId).value;
-  try{
-    await api("/api/admin/attendance",{
-      method:"POST",
-      body:JSON.stringify({
-        student_id:studentId,
-        attendance_date:selectedDate,
-        status:statusValue
-      })
-    });
-    await loadAttendance();
-  }catch(e){alert(e.message)}
+async function saveAttendance(button){
+    const row = button.closest("tr");
+    const studentId = row.dataset.studentId;
+    const date = $("attendanceDate").value;
+    const status = row.querySelector("select").value;
+
+    if(!date){
+        alert("Please select an attendance date first.");
+        return;
+    }
+    if(status === "Not Marked"){
+        alert("Choose Present, Absent, or Leave.");
+        return;
+    }
+
+    try{
+        await api("/api/admin/attendance", {
+            method:"POST",
+            body:JSON.stringify({
+                student_id:studentId,
+                attendance_date:date,
+                status:status
+            })
+        });
+        alert("Attendance saved for " + studentId + ".");
+        await loadSummary();
+    }catch(e){ alert("Could not save attendance: " + e.message); }
 }
 
 async function loadFees(){
-  const status=document.getElementById("feeStatus");
-  status.textContent="Loading...";
-  try{
-    const data=await api("/api/admin/fees");
-    const rows=data.fees||[];
-    document.getElementById("feeCount").textContent=rows.length;
-    document.getElementById("fees").innerHTML=rows.length?rows.map(r=>
-      "<tr><td>"+esc(r.student_id)+"</td><td>"+esc(r.student_name)+
-      "</td><td>"+esc(r.total_amount)+"</td><td>"+esc(r.paid_amount)+
-      "</td><td>"+esc(r.balance)+"</td><td>"+esc(r.status)+
-      "</td><td><input type='number' min='0' id='total-"+esc(r.student_id)+
-      "' value='"+esc(r.total_amount)+"' placeholder='Total' style='width:85px'>"+
-      "<input type='number' min='0' id='paid-"+esc(r.student_id)+
-      "' value='"+esc(r.paid_amount)+"' placeholder='Paid' style='width:85px'>"+
-      "<button onclick='saveFees(\""+esc(r.student_id)+"\")'>Save</button></td></tr>"
-    ).join(""):'<tr><td colspan="7">No registered students found.</td></tr>';
-    status.textContent="Loaded fee details for "+rows.length+" student(s).";
-  }catch(e){showError("feeStatus",e)}
+    $("fees").innerHTML = "Loading fee records...";
+    try{
+        const data = await api("/api/admin/fees");
+        const list = getArray(data, ["fees","records","data"]);
+        $("fees").innerHTML = makeTable(
+            ["Student ID","Name","Total Fee","Paid Amount","Balance","Status","Update"],
+            list.map(f => {
+                const id = String(f.student_id ?? "");
+                const total = Number(f.total_amount || 0);
+                const paid = Number(f.paid_amount || 0);
+                const balance = f.balance !== undefined ? Number(f.balance) : Math.max(0,total-paid);
+                const status = f.status || (balance <= 0 && total > 0 ? "Paid" : "Pending");
+                return '<tr data-student-id="'+escapeHTML(id)+'">' +
+                    cell(id) + cell(f.name || f.student_name) +
+                    '<td><input type="number" min="0" class="fee-total" value="'+total+'"></td>' +
+                    '<td><input type="number" min="0" class="fee-paid" value="'+paid+'"></td>' +
+                    cell(balance.toFixed(2)) + cell(status) +
+                    '<td><button class="green" onclick="saveFees(this)">Save</button></td>' +
+                    '</tr>';
+            })
+        );
+    }catch(e){ showError("fees", e); }
 }
 
-async function saveFees(studentId){
-  const total=Number(document.getElementById("total-"+studentId).value);
-  const paid=Number(document.getElementById("paid-"+studentId).value);
-  if(total<0||paid<0||paid>total){
-    alert("Paid amount must be between zero and total fees.");
-    return;
-  }
-  try{
-    await api("/api/admin/fees",{
-      method:"POST",
-      body:JSON.stringify({
-        student_id:studentId,
-        total_amount:total,
-        paid_amount:paid
-      })
-    });
-    await loadFees();
-  }catch(e){alert(e.message)}
+async function saveFees(button){
+    const row = button.closest("tr");
+    const studentId = row.dataset.studentId;
+    const total = Number(row.querySelector(".fee-total").value);
+    const paid = Number(row.querySelector(".fee-paid").value);
+
+    if(total < 0 || paid < 0 || paid > total){
+        alert("Enter valid amounts. Paid amount cannot exceed total fees.");
+        return;
+    }
+
+    try{
+        await api("/api/admin/fees", {
+            method:"POST",
+            body:JSON.stringify({
+                student_id:studentId,
+                total_amount:total,
+                paid_amount:paid
+            })
+        });
+        alert("Fee record saved for " + studentId + ".");
+        await loadFees();
+        await loadSummary();
+    }catch(e){ alert("Could not save fee record: " + e.message); }
+}
+
+async function loadSummary(){
+    try{
+        const [s,o,c,a,f] = await Promise.all([
+            api("/api/admin/students"),
+            api("/api/admin/outpasses"),
+            api("/api/admin/complaints"),
+            api("/api/admin/attendance"),
+            api("/api/admin/fees")
+        ]);
+
+        $("summary").innerHTML =
+            "<strong>Registered Students:</strong> "+getArray(s,["students"]).length+
+            " &nbsp; | &nbsp; <strong>Outpass Applications:</strong> "+getArray(o,["outpasses"]).length+
+            " &nbsp; | &nbsp; <strong>Complaints:</strong> "+getArray(c,["complaints"]).length+
+            " &nbsp; | &nbsp; <strong>Attendance Records:</strong> "+getArray(a,["attendance"]).length+
+            " &nbsp; | &nbsp; <strong>Fee Records:</strong> "+getArray(f,["fees"]).length;
+    }catch(e){
+        $("summary").innerHTML = '<div class="message">Summary unavailable: '+escapeHTML(e.message)+'</div>';
+    }
 }
 
 async function loadDashboard(){
-  await Promise.all([
-    loadStudents(),
-    loadOutpasses(),
-    loadComplaints(),
-    loadAttendance(),
-    loadFees()
-  ]);
+    await Promise.all([
+        loadSummary(),
+        loadStudents(),
+        loadOutpasses(),
+        loadComplaints(),
+        loadAttendance(),
+        loadFees()
+    ]);
 }
 
+function logout(){
+    ["adminToken","admin_token","admin_token_key","token","authToken"].forEach(k=>{
+        localStorage.removeItem(k);
+        sessionStorage.removeItem(k);
+    });
+    location.href = "adminlogin.html";
+}
+
+$("attendanceDate").value = new Date().toLocaleDateString("en-CA");
 loadDashboard();
 </script>
 </body>
