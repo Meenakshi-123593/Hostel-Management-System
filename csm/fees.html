@@ -1,776 +1,214 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hostel Fees Details</title>
-    <link rel="stylesheet" href="style.css">
-
-    <style>
-        .payment-box,
-        .fees-table-container {
-            background: #fff;
-            padding: 20px;
-            margin: 22px 0;
-            border-radius: 12px;
-            box-shadow: 0 3px 12px #0001;
-        }
-
-        .payment-options {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin: 15px 0;
-        }
-
-        .payment-option {
-            padding: 12px 16px;
-            border: 1px solid #12366b;
-            border-radius: 7px;
-            background: #fff;
-            color: #12366b;
-            cursor: pointer;
-        }
-
-        .payment-option.selected {
-            background: #12366b;
-            color: white;
-        }
-
-        .payment-box label {
-            display: block;
-            font-weight: bold;
-            margin-top: 12px;
-        }
-
-        .payment-box input,
-        .payment-box select {
-            width: 100%;
-            padding: 11px;
-            margin-top: 6px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            box-sizing: border-box;
-        }
-
-        .pay-button {
-            background: #12366b;
-            color: #fff;
-            padding: 12px 20px;
-            border: 0;
-            border-radius: 7px;
-            margin-top: 18px;
-            cursor: pointer;
-        }
-
-        .pay-button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        #paymentMessage {
-            white-space: pre-wrap;
-            font-weight: bold;
-            overflow-wrap: anywhere;
-        }
-
-        .note {
-            font-size: 14px;
-            color: #555;
-        }
-
-        .status {
-            font-weight: bold;
-        }
-
-        .error {
-            color: #b00020;
-        }
-
-        .success {
-            color: #167a36;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hostel Fees - NGI</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:Arial,sans-serif;background:#f3f6fb;margin:0;color:#243047}
+header{background:#173b70;color:white;padding:20px;text-align:center}
+.container{max-width:1100px;margin:25px auto;padding:15px}
+.card{background:white;padding:20px;border-radius:12px;box-shadow:0 3px 12px #0001;margin-bottom:20px}
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:15px}
+.amount{font-size:25px;font-weight:bold;margin-top:10px}
+label{display:block;margin:12px 0 6px;font-weight:bold}
+input,select,button{padding:11px;width:100%;border:1px solid #ccd4e0;border-radius:7px;font-size:15px}
+button{background:#1763c6;color:white;border:0;cursor:pointer;margin-top:15px}
+button:disabled{opacity:.6}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;background:white}
+th,td{padding:12px;border-bottom:1px solid #e3e8ef;text-align:left;white-space:nowrap}
+th{background:#eaf1fb}
+.message{margin-top:12px;padding:10px;border-radius:6px;overflow-wrap:anywhere}
+.success{background:#e0f7e9;color:#126b38}
+.error{background:#ffebeb;color:#a32020}
+.small{color:#667085;font-size:13px}
+</style>
 </head>
+<body>
+<header>
+<h1>NGI Hostel Management System</h1>
+<h2>Student Fee Details</h2>
+</header><div class="container">
+<div class="card">
+<h3>Student Information</h3>
+<p>Student ID: <strong id="studentId">Loading...</strong></p>
+<p>Name: <strong id="studentName">-</strong></p>
+</div><div class="summary">
+<div class="card">Total Fees<div class="amount" id="totalFees">₹0</div></div>
+<div class="card">Total Paid<div class="amount" id="totalPaid">₹0</div></div>
+<div class="card">Outstanding Balance<div class="amount" id="totalBalance">₹0</div></div>
+</div><div class="card">
+<h3>Academic Year Fee Details</h3>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Academic Year</th><th>Total Fee</th><th>Paid</th><th>Balance</th><th>Status</th></tr></thead>
+<tbody id="feesTableBody"><tr><td colspan="5">Loading fees...</td></tr></tbody>
+</table>
+</div>
+</div><div class="card">
+<h3>Make a Fee Payment</h3>
+<p class="small">Choose the academic year and enter the amount. Payments here are recorded by the hostel system; this is not a real payment gateway.</p>
+<label for="academicYear">Academic Year</label>
+<select id="academicYear">
+<option value="1">1st Year</option>
+<option value="2">2nd Year</option>
+<option value="3">3rd Year</option>
+<option value="4">4th Year</option>
+</select><label for="paymentAmount">Payment Amount (₹)</label>
+<input type="number" id="paymentAmount" min="1" step="0.01" placeholder="Enter amount">
 
-<body class="fees-page">
+<label for="paymentMethod">Payment Method</label>
+<select id="paymentMethod">
 
-<header class="room-header">
-    <h1>Hostel Fees Details</h1>
-    <p>Nehru Group of Institutions | Student Hostel Portal</p>
-</header>
+<option value="UPI">UPI</option>
+<option value="Google Pay">Google Pay</option>
+<option value="Paytm">Paytm</option>
+<option value="Card">Card</option>
+<option value="Cash">Cash</option>
+</select>
+<button id="payButton" onclick="makePayment()">Submit Payment</button>
+<div id="paymentMessage"></div>
+</div><div class="card">
+<h3>Payment History</h3>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Date</th><th>Academic Year</th><th>Amount</th><th>Method</th><th>Status</th></tr></thead>
+<tbody id="paymentHistoryBody"><tr><td colspan="5">Loading payment history...</td></tr></tbody>
+</table>
+</div>
+</div>
+<button onclick="location.href='dashboard.html'">Back to Dashboard</button>
+</div><script>
+const API_BASE="https://hostel-management-system-api-426c.onrender.com";
+let studentId="";
+let feeData=null;
 
-<a href="dashboard.html" class="back-link">← Back to Dashboard</a>
-
-<main class="fees-content">
-
-    <h2 class="page-title">Student Fee Details</h2>
-
-    <p id="studentInfo">Loading student information...</p>
-
-    <section class="fees-summary">
-
-        <div class="fees-summary-card">
-            <h3>Total Fees</h3>
-            <strong id="totalFees">₹0</strong>
-        </div>
-
-        <div class="fees-summary-card">
-            <h3>Total Paid</h3>
-            <strong id="totalPaid">₹0</strong>
-        </div>
-
-        <div class="fees-summary-card">
-            <h3>Outstanding Balance</h3>
-            <strong id="totalBalance">₹0</strong>
-        </div>
-
-    </section>
-
-    <section class="fees-table-container">
-
-        <h2>Fee Payment Details</h2>
-
-        <table class="fees-table">
-            <thead>
-                <tr>
-                    <th>Student ID</th>
-                    <th>Total Fees</th>
-                    <th>Amount Paid</th>
-                    <th>Balance</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-
-            <tbody id="feesTableBody">
-                <tr>
-                    <td colspan="5">Loading fee details...</td>
-                </tr>
-            </tbody>
-        </table>
-
-        <p class="note">
-            Fee details are loaded from the hostel management backend.
-            Ask the administrator to configure your fee record if no record exists.
-        </p>
-
-    </section>
-
-    <section class="payment-box">
-
-        <h2>Pay Hostel Fees</h2>
-
-        <p>
-            Enter the amount you want to record as a payment and select a payment method.
-        </p>
-
-        <label for="paymentAmount">Payment Amount (₹)</label>
-
-        <input
-            id="paymentAmount"
-            type="number"
-            min="1"
-            step="1"
-            placeholder="Enter amount"
-        >
-
-        <div class="payment-options">
-
-            <button
-                type="button"
-                class="payment-option selected"
-                data-method="Card"
-            >
-                💳 Debit/Credit Card
-            </button>
-
-            <button
-                type="button"
-                class="payment-option"
-                data-method="Google Pay"
-            >
-                Google Pay
-            </button>
-
-            <button
-                type="button"
-                class="payment-option"
-                data-method="Paytm"
-            >
-                Paytm
-            </button>
-
-            <button
-                type="button"
-                class="payment-option"
-                data-method="BHIM UPI"
-            >
-                BHIM UPI
-            </button>
-
-        </div>
-
-        <p class="note">
-            This is a simulated project payment. No real money will be transferred.
-            A real payment gateway is required to process actual payments.
-        </p>
-
-        <button
-            type="button"
-            class="pay-button"
-            id="payButton"
-        >
-            Continue
-        </button>
-
-        <p id="paymentMessage" role="status"></p>
-
-    </section>
-
-    <section class="fees-table-container">
-
-        <h2>Payment History</h2>
-
-        <table class="fees-table">
-
-            <thead>
-                <tr>
-                    <th>Payment Date</th>
-                    <th>Amount</th>
-                    <th>Payment Method</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-
-            <tbody id="paymentHistoryBody">
-                <tr>
-                    <td colspan="4">Loading payment history...</td>
-                </tr>
-            </tbody>
-
-        </table>
-
-    </section>
-
-</main>
-
-<script>
-const API_BASE =
-    "https://hostel-management-system-api-426c.onrender.com";
-
-let currentStudent = null;
-let selectedMethod = "Card";
-let feeRecord = null;
-let paymentInProgress = false;
-
-
-/* Get the logged-in student */
-
-function getStudent() {
-
-    for (const store of [sessionStorage, localStorage]) {
-
-        for (const key of [
-            "loggedInStudent",
-            "currentUser",
-            "student"
-        ]) {
-
-            try {
-
-                const student = JSON.parse(
-                    store.getItem(key) || "null"
-                );
-
-                if (student && typeof student === "object") {
-                    return student;
-                }
-
-            } catch (error) {
-                // Continue checking other storage keys.
-            }
+function getStudent(){
+  const keys=["loggedInStudent","currentUser","student"];
+  for(const storage of [sessionStorage,localStorage]){
+    for(const key of keys){
+      try{
+        const value=storage.getItem(key);
+        if(!value) continue;
+        const obj=JSON.parse(value);
+        if(obj && (obj.student_id || obj.id)){
+          return obj;
         }
+      }catch(e){}
     }
-
-    return null;
+  }
+  return null;
 }
 
-
-/* Format currency */
-
-function money(value) {
-
-    return "₹" + Number(value || 0).toLocaleString("en-IN");
-
+function money(value){
+  return "₹"+Number(value||0).toLocaleString("en-IN",{maximumFractionDigits:2});
 }
 
-
-/* Escape text before adding it to HTML */
-
-function safe(value) {
-
-    return String(value ?? "").replace(/[&<>"']/g, character => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;"
-    }[character]));
-
+function yearLabel(year){
+  const labels={"1":"1st Year","2":"2nd Year","3":"3rd Year","4":"4th Year"};
+  return labels[String(year)]||("Year "+year);
 }
 
-
-/* Display payment messages */
-
-function showMessage(message, type = "") {
-
-    const element = document.getElementById("paymentMessage");
-
-    element.textContent = message;
-    element.className = type;
-
+function showMessage(message,type){
+  const box=document.getElementById("paymentMessage");
+  box.className="message "+type;
+  box.textContent=message;
 }
 
+async function loadFees(){
+  const student=getStudent();
+  if(!student){
+    document.getElementById("studentId").textContent="Not logged in";
+    document.getElementById("feesTableBody").innerHTML='<tr><td colspan="5">Please log in again through the student login page.</td></tr>';
+    return;
+  }
 
-/* Display fee information */
+  studentId=student.student_id||student.id;
+  document.getElementById("studentId").textContent=studentId;
+  document.getElementById("studentName").textContent=student.name||student.full_name||"-";
 
-function renderFees() {
+  try{
+    const response=await fetch(`${API_BASE}/api/fees?student_id=${encodeURIComponent(studentId)}`);
+    const data=await response.json();
+    if(!response.ok||data.success===false) throw new Error(data.message||"Unable to load fees");
 
-    const body = document.getElementById("feesTableBody");
+    feeData=data;
+    const years=Array.isArray(data.years)?data.years:[];
+    document.getElementById("totalFees").textContent=money(data.total_amount);
+    document.getElementById("totalPaid").textContent=money(data.paid_amount);
+    document.getElementById("totalBalance").textContent=money(data.balance);
 
-    if (!feeRecord) {
+    const tbody=document.getElementById("feesTableBody");
+    tbody.innerHTML=years.length?years.map(f=>{
+      const year=f.academic_year||f.year;
+      return `<tr>
+        <td>${yearLabel(year)}</td>
+        <td>${money(f.total_amount)}</td>
+        <td>${money(f.paid_amount)}</td>
+        <td>${money(f.balance)}</td>
+        <td>${escapeHtml(f.status||"Pending")}</td>
+      </tr>`;
+    }).join(""):'<tr><td colspan="5">No year-wise fee records returned. Please check the backend deployment.</td></tr>';
 
-        body.innerHTML = `
-            <tr>
-                <td colspan="5">
-                    No fee record is available for this student.
-                    Please contact the administrator.
-                </td>
-            </tr>
-        `;
-
-        document.getElementById("totalFees").textContent = money(0);
-        document.getElementById("totalPaid").textContent = money(0);
-        document.getElementById("totalBalance").textContent = money(0);
-
-        document.getElementById("paymentAmount").value = "";
-
-        return;
-    }
-
-    const total = Number(feeRecord.total_amount || 0);
-    const paid = Number(feeRecord.paid_amount || 0);
-    const balance = Math.max(0, total - paid);
-
-    let status = "Due";
-
-    if (total > 0 && paid >= total) {
-        status = "Fully Paid";
-    } else if (paid > 0) {
-        status = "Partially Paid";
-    }
-
-    document.getElementById("totalFees").textContent = money(total);
-    document.getElementById("totalPaid").textContent = money(paid);
-    document.getElementById("totalBalance").textContent = money(balance);
-
-    body.innerHTML = `
-        <tr>
-            <td>${safe(feeRecord.student_id || "")}</td>
-            <td>${money(total)}</td>
-            <td>${money(paid)}</td>
-            <td>${money(balance)}</td>
-            <td class="status">${status}</td>
-        </tr>
-    `;
-
-    const amountInput = document.getElementById("paymentAmount");
-
-    amountInput.max = balance;
-
-    if (balance <= 0) {
-
-        amountInput.value = "";
-        amountInput.placeholder = "No outstanding balance";
-
-    } else {
-
-        amountInput.placeholder =
-            "Maximum payable: " + money(balance);
-
-    }
+    const history=Array.isArray(data.payments)?data.payments:[];
+    document.getElementById("paymentHistoryBody").innerHTML=history.length?history.map(p=>`
+      <tr>
+        <td>${escapeHtml(p.payment_date||p.created_at||p.date||"-")}</td>
+        <td>${escapeHtml(p.year_label||yearLabel(p.academic_year||p.year||"-"))}</td>
+        <td>${money(p.amount)}</td>
+        <td>${escapeHtml(p.payment_method||p.method||"-")}</td>
+        <td>${escapeHtml(p.status||"Paid")}</td>
+      </tr>`).join(""):'<tr><td colspan="5">No payments recorded yet.</td></tr>';
+  }catch(error){
+    document.getElementById("feesTableBody").innerHTML=`<tr><td colspan="5">${escapeHtml(error.message)}</td></tr>`;
+    showMessage("Could not load fee details. Check that the backend is Live.", "error");
+  }
 }
 
+async function makePayment(){
+  if(!studentId){showMessage("Please log in again.", "error");return;}
 
-/* Display payment history */
+  const amount=Number(document.getElementById("paymentAmount").value);
+  const academic_year=Number(document.getElementById("academicYear").value);
+  const payment_method=document.getElementById("paymentMethod").value;
+  const selectedYear=(feeData?.years||[]).find(f=>Number(f.academic_year||f.year)===academic_year);
 
-function renderPaymentHistory(payments) {
+  if(!Number.isFinite(amount)||amount<=0){
+    showMessage("Enter a valid payment amount.", "error");return;
+  }
+  if(selectedYear && amount>Number(selectedYear.balance)){
+    showMessage("Payment cannot exceed the selected year's outstanding balance.", "error");return;
+  }
 
-    const body = document.getElementById("paymentHistoryBody");
+  const button=document.getElementById("payButton");
+  button.disabled=true;
+  button.textContent="Processing...";
 
-    if (!Array.isArray(payments) || payments.length === 0) {
-
-        body.innerHTML = `
-            <tr>
-                <td colspan="4">No payment history available.</td>
-            </tr>
-        `;
-
-        return;
-    }
-
-    body.innerHTML = "";
-
-    payments.forEach(payment => {
-
-        const row = document.createElement("tr");
-
-        const date =
-            payment.created_at ||
-            payment.payment_date ||
-            payment.date ||
-            "-";
-
-        const amount =
-            payment.amount ??
-            payment.payment_amount ??
-            0;
-
-        const method =
-            payment.payment_method ||
-            payment.method ||
-            "-";
-
-        row.innerHTML = `
-            <td>${safe(date)}</td>
-            <td>${money(amount)}</td>
-            <td>${safe(method)}</td>
-            <td>Recorded</td>
-        `;
-
-        body.appendChild(row);
-
+  try{
+    const response=await fetch(`${API_BASE}/api/fees/payment`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({student_id:studentId,amount,academic_year,payment_method})
     });
+    const data=await response.json();
+    if(!response.ok||data.success===false) throw new Error(data.message||"Payment failed");
 
+    showMessage(data.message||"Payment recorded successfully.", "success");
+    document.getElementById("paymentAmount").value="";
+    await loadFees();
+  }catch(error){
+    showMessage(error.message||"Unable to submit payment.", "error");
+  }finally{
+    button.disabled=false;
+    button.textContent="Submit Payment";
+  }
 }
 
-
-/* Load saved fee details from the backend */
-
-async function loadFees() {
-
-    currentStudent = getStudent();
-
-    const info = document.getElementById("studentInfo");
-    const body = document.getElementById("feesTableBody");
-
-    if (!currentStudent) {
-
-        info.textContent =
-            "Please log in to view your fee details.";
-
-        body.innerHTML = `
-            <tr>
-                <td colspan="5">
-                    Student information is unavailable.
-                    Please log in again.
-                </td>
-            </tr>
-        `;
-
-        return;
-    }
-
-    const studentId =
-        currentStudent.student_id ||
-        currentStudent.studentId ||
-        "";
-
-    info.textContent =
-        "Student: " +
-        (currentStudent.name || "-") +
-        " | Student ID: " +
-        (studentId || "-") +
-        " | College Year: " +
-        (currentStudent.year || currentStudent.academic_year || "-");
-
-    if (!studentId) {
-
-        body.innerHTML = `
-            <tr>
-                <td colspan="5">
-                    Student ID is missing. Please log in again.
-                </td>
-            </tr>
-        `;
-
-        return;
-    }
-
-    body.innerHTML = `
-        <tr>
-            <td colspan="5">Loading saved fee details...</td>
-        </tr>
-    `;
-
-    try {
-
-        const response = await fetch(
-            `${API_BASE}/api/fees?student_id=${encodeURIComponent(studentId)}`
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-
-            throw new Error(
-                data.error ||
-                data.message ||
-                "Unable to load fee details."
-            );
-
-        }
-
-        const record =
-            data.fees ||
-            data.record ||
-            data.fee ||
-            data;
-
-        if (
-            !record ||
-            Array.isArray(record) ||
-            record.total_amount === undefined
-        ) {
-
-            feeRecord = null;
-            renderFees();
-
-            renderPaymentHistory(
-                data.payments || []
-            );
-
-            return;
-        }
-
-        feeRecord = {
-            student_id: record.student_id || studentId,
-            total_amount: Number(record.total_amount || 0),
-            paid_amount: Number(record.paid_amount || 0)
-        };
-
-        renderFees();
-
-        renderPaymentHistory(
-            data.payments ||
-            record.payments ||
-            []
-        );
-
-    } catch (error) {
-
-        body.innerHTML = `
-            <tr>
-                <td colspan="5">
-                    ${safe(error.message)}
-                </td>
-            </tr>
-        `;
-
-        showMessage(
-            "Could not load fee details. Please check your connection and try again.",
-            "error"
-        );
-
-    }
+function escapeHtml(value){
+  return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
-
-
-/* Select a payment method */
-
-document.querySelectorAll(".payment-option").forEach(button => {
-
-    button.addEventListener("click", () => {
-
-        document.querySelectorAll(".payment-option").forEach(item => {
-            item.classList.remove("selected");
-        });
-
-        button.classList.add("selected");
-
-        selectedMethod = button.dataset.method;
-
-        showMessage("");
-
-    });
-
-});
-
-
-/* Record a simulated payment */
-
-document.getElementById("payButton").addEventListener("click", async () => {
-
-    if (paymentInProgress) {
-        return;
-    }
-
-    const button = document.getElementById("payButton");
-
-    if (!currentStudent) {
-
-        showMessage(
-            "Please log in before making a payment.",
-            "error"
-        );
-
-        return;
-    }
-
-    if (!feeRecord) {
-
-        showMessage(
-            "No fee record exists for your account. Please contact the administrator.",
-            "error"
-        );
-
-        return;
-    }
-
-    const studentId =
-        currentStudent.student_id ||
-        currentStudent.studentId;
-
-    const amount = Number(
-        document.getElementById("paymentAmount").value
-    );
-
-    const total = Number(feeRecord.total_amount || 0);
-    const paid = Number(feeRecord.paid_amount || 0);
-    const balance = Math.max(0, total - paid);
-
-    if (!Number.isInteger(amount) || amount <= 0) {
-
-        showMessage(
-            "Enter a valid whole-number payment amount.",
-            "error"
-        );
-
-        return;
-    }
-
-    if (balance <= 0) {
-
-        showMessage(
-            "Your fees are already fully paid.",
-            "error"
-        );
-
-        return;
-    }
-
-    if (amount > balance) {
-
-        showMessage(
-            "Payment cannot exceed the outstanding balance of " +
-            money(balance) + ".",
-            "error"
-        );
-
-        return;
-    }
-
-    const confirmed = confirm(
-        "Record a simulated " +
-        selectedMethod +
-        " payment of " +
-        money(amount) +
-        "?\n\nNo real money will be transferred."
-    );
-
-    if (!confirmed) {
-        return;
-    }
-
-    paymentInProgress = true;
-    button.disabled = true;
-
-    showMessage("Saving payment record...");
-
-    try {
-
-        /*
-         * IMPORTANT:
-         * Use the student payment endpoint.
-         * Do not use /api/admin/fees here because it requires Admin login.
-         */
-
-        const response = await fetch(
-            `${API_BASE}/api/fees/payment`,
-            {
-                method: "POST",
-
-                headers: {
-                    "Content-Type": "application/json"
-                },
-
-                body: JSON.stringify({
-                    student_id: studentId,
-                    amount: amount,
-                    payment_method: selectedMethod
-                })
-            }
-        );
-
-        const result = await response.json();
-
-        if (!response.ok) {
-
-            throw new Error(
-                result.error ||
-                result.message ||
-                "The payment could not be saved."
-            );
-
-        }
-
-        showMessage(
-            "Payment recorded successfully. Refreshing saved fee details..."
-        );
-
-        document.getElementById("paymentAmount").value = "";
-
-        await loadFees();
-
-        showMessage(
-            "Payment record saved successfully!\n" +
-            "Method: " + selectedMethod + "\n" +
-            "Amount: " + money(amount) + "\n\n" +
-            "This is a simulated project payment. No real money was transferred.",
-            "success"
-        );
-
-    } catch (error) {
-
-        showMessage(
-            "Unable to save payment: " + error.message,
-            "error"
-        );
-
-    } finally {
-
-        paymentInProgress = false;
-        button.disabled = false;
-
-    }
-
-});
-
-
-/* Load fees when the page opens */
 
 loadFees();
-</script>
-
-</body>
+</script></body>
 </html>
