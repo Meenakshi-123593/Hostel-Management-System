@@ -1,62 +1,51 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hostel Portal Login</title>
     <link rel="stylesheet" href="style.css">
-</head>
-
-<body class="login-page">
-
-<div class="login-container">
-
+</head><body class="login-page"><div class="login-container">
     <div class="login-brand">
         <div class="login-logo">NGI</div>
         <h1>Nehru Group of Institutions</h1>
         <p>Coimbatore, Tamil Nadu</p>
-    </div>
+    </div><div class="login-card">
+    <h2>Login</h2>
+    <p class="login-subtitle">Access your Hostel Portal</p>
 
-    <div class="login-card">
-        <h2>Login</h2>
-        <p class="login-subtitle">Access your Hostel Portal</p>
+    <form id="loginForm">
+        <div class="login-field">
+            <label for="username">Username</label>
+            <input type="text" id="username"
+                   placeholder="Enter your username" required>
+        </div>
 
-        <form id="loginForm">
-            <div class="login-field">
-                <label for="username">Username</label>
-                <input type="text" id="username"
-                       placeholder="Enter your username" required>
+        <div class="login-field">
+            <label for="password">Password</label>
+            <div class="password-wrapper">
+                <input type="password" id="password"
+                       placeholder="Enter your password" required>
+                <button type="button" id="toggleBtn"
+                        class="show-password">Show</button>
             </div>
+        </div>
 
-            <div class="login-field">
-                <label for="password">Password</label>
+        <button type="submit" class="login-button" id="loginButton">
+            Login
+        </button>
+    </form>
 
-                <div class="password-wrapper">
-                    <input type="password" id="password"
-                           placeholder="Enter your password" required>
+    <p id="message" role="status"></p>
 
-                    <button type="button" id="toggleBtn"
-                            class="show-password">Show</button>
-                </div>
-            </div>
+    <p class="register-text">
+        New user? <a href="register.html">Create an account</a>
+    </p>
 
-            <button type="submit" class="login-button" id="loginButton">
-                Login
-            </button>
-        </form>
-
-        <p id="message" role="status"></p>
-
-        <p class="register-text">
-            New user? <a href="register.html">Create an account</a>
-        </p>
-
-        <a href="index.html" class="login-home">Back to Home</a>
-    </div>
+    <a href="index.html" class="login-home">Back to Home</a>
 </div>
 
-<script>
-const API_URL = "https://https://hostel-management-system-api-426c.onrender.com";
+</div><script>
+const API_URL = "https://hostel-management-system-api-426c.onrender.com";
 
 const form = document.getElementById("loginForm");
 const message = document.getElementById("message");
@@ -64,7 +53,6 @@ const button = document.getElementById("loginButton");
 
 document.getElementById("toggleBtn").addEventListener("click", function () {
     const password = document.getElementById("password");
-
     password.type = password.type === "password" ? "text" : "password";
     this.textContent = password.type === "password" ? "Show" : "Hide";
 });
@@ -116,7 +104,5 @@ form.addEventListener("submit", async function (event) {
         button.disabled = false;
     }
 });
-</script>
-
-</body>
+</script></body>
 </html>
