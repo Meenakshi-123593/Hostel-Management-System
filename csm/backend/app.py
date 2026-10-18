@@ -316,10 +316,16 @@ def require_admin():
 def admin_required(function):
     @wraps(function)
     def wrapper(*args, **kwargs):
+        # Allow browser CORS preflight requests before checking the token.
+        if request.method == "OPTIONS":
+            return "", 204
+
         admin, error = require_admin()
         if error:
             return error
+
         return function(*args, **kwargs)
+
     return wrapper
 
 
