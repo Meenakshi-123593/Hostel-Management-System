@@ -1,21 +1,15 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard</title>
+    <title>Admin Dashboard | NGI Hostel Management System</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
-
-<header>
+<body><header>
     <h1>Nehru Group of Institutions</h1>
     <p>Hostel Management System — Admin Portal</p>
-</header>
-
-<main class="login-container">
-    <h2>Admin Dashboard</h2>
-    <div id="adminLoginSection">
+</header><main class="login-container">
+    <h2>Admin Dashboard</h2><div id="adminLoginSection">
     <h3>Admin Login</h3>
 
     <form id="adminLoginForm">
@@ -32,33 +26,35 @@
 
     <p id="loginMessage"></p>
 </div>
+
+<div id="adminDashboard" style="display:none;">
     <p>Welcome, Administrator!</p>
-     <div id="adminDashboard"></div>
+
     <section>
         <h3>Student Records</h3>
         <p>View registered students and their details.</p>
-        <button id="viewStudents">View Student Records</button>
+        <button type="button" id="viewStudents">
+            View Student Records
+        </button>
         <p id="message"></p>
     </section>
 
     <div id="studentRecords"></div>
+    <button type="button" id="logout">Logout</button>
+</div>
 
-    <button id="logout">Logout</button>
-</main>
-
-<script>
-const API_URL = "https://https://hostel-management-system-api-426c.onrender.com";
+</main><script>
+const API_URL = "https://hostel-management-system-api-426c.onrender.com";
 
 const loginForm = document.getElementById("adminLoginForm");
 const loginSection = document.getElementById("adminLoginSection");
 const dashboard = document.getElementById("adminDashboard");
 const loginMessage = document.getElementById("loginMessage");
+const message = document.getElementById("message");
+const records = document.getElementById("studentRecords");
 
 async function loadStudentRecords() {
-    const message = document.getElementById("message");
-    const records = document.getElementById("studentRecords");
     const token = sessionStorage.getItem("adminToken");
-
     records.replaceChildren();
 
     if (!token) {
@@ -78,7 +74,8 @@ async function loadStudentRecords() {
         const result = await response.json();
 
         if (!response.ok || !result.success) {
-            message.textContent = result.message || "Unable to load records.";
+            message.textContent =
+                result.message || "Unable to load student records.";
             return;
         }
 
@@ -95,9 +92,9 @@ async function loadStudentRecords() {
 
         const header = document.createElement("tr");
 
-        headings.forEach(text => {
+        headings.forEach(item => {
             const th = document.createElement("th");
-            th.textContent = text;
+            th.textContent = item;
             header.appendChild(th);
         });
 
@@ -112,7 +109,7 @@ async function loadStudentRecords() {
                 "room_number", "phone"
             ].forEach(key => {
                 const cell = document.createElement("td");
-                cell.textContent = student[key] || "-";
+                cell.textContent = student[key] ?? "-";
                 row.appendChild(cell);
             });
 
@@ -121,16 +118,17 @@ async function loadStudentRecords() {
 
         records.appendChild(table);
         message.textContent =
-            `Total registered students: ${result.count}`;
+            `Total registered students: ${result.count ?? result.students.length}`;
 
     } catch (error) {
-        message.textContent = "Connection failed. Please try again.";
+        message.textContent =
+            "Unable to connect. Please check the backend connection.";
+        console.error("Student records error:", error);
     }
 }
 
-loginForm.addEventListener("submit", async function(event) {
+loginForm.addEventListener("submit", async event => {
     event.preventDefault();
-
     loginMessage.textContent = "Checking login details...";
 
     const username = document.getElementById("adminUsername").value.trim();
@@ -147,33 +145,31 @@ loginForm.addEventListener("submit", async function(event) {
 
         const result = await response.json();
 
-        if (!response.ok || !result.success) {
+        if (!response.ok || !result.success || !result.token) {
             loginMessage.textContent =
-                result.message || "Login failed.";
+                result.message || "Login failed. Please try again.";
             return;
         }
 
         sessionStorage.setItem("adminToken", result.token);
-
         loginSection.style.display = "none";
         dashboard.style.display = "block";
-
         loginMessage.textContent = "";
 
         await loadStudentRecords();
 
     } catch (error) {
         loginMessage.textContent =
-            "Connection failed. Please try again.";
+            "Unable to connect to the backend. Please try again.";
+        console.error("Admin login error:", error);
     }
 });
 
 document.getElementById("viewStudents").addEventListener(
-    "click",
-    loadStudentRecords
+    "click", loadStudentRecords
 );
 
-document.getElementById("logout").addEventListener("click", function() {
+document.getElementById("logout").addEventListener("click", () => {
     sessionStorage.removeItem("adminToken");
     window.location.reload();
 });
@@ -182,11 +178,6 @@ if (sessionStorage.getItem("adminToken")) {
     loginSection.style.display = "none";
     dashboard.style.display = "block";
     loadStudentRecords();
-} else {
-    loginSection.style.display = "block";
-    dashboard.style.display = "none";
 }
-</script>
-
-</body>
+</script></body>
 </html>
