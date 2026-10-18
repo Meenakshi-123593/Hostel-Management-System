@@ -220,7 +220,7 @@ def fee_record(row):
     year = int(row["academic_year"])
 
     return {
-        "id": row["id"],
+        "id": row["id"] if "id" in row.keys() else None,
         "student_id": row["student_id"],
         "academic_year": year,
         "year": year,
