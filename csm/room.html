@@ -1,122 +1,171 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hostel Room Details</title>
     <link rel="stylesheet" href="style.css">
-</head>
+</head><body class="room-page"><header class="room-header">
+    <h1>Hostel Room Details</h1>
+    <p>Nehru Group of Institutions | Student Hostel Portal</p>
+</header>
 
-<body class="room-page">
+<a href="dashboard.html" class="back-link">← Back to Dashboard</a>
 
-    <header class="room-header">
-        <h1>Hostel Room Details</h1>
-        <p>Nehru Group of Institutions | Student Hostel Portal</p>
-    </header>
+<main class="room-content">
 
-    <a href="dashboard.html" class="back-link">← Back to Dashboard</a>
+    <h2 class="page-title">Room Allocation and Availability</h2>
 
-    <main class="room-content">
+    <section class="room-summary">
 
-        <h2 class="page-title">Room Allocation and Availability</h2>
+        <div class="room-summary-card">
+            <h3>Total Rooms Listed</h3>
+            <strong>12</strong>
+        </div>
 
-        <section class="room-summary">
+        <div class="room-summary-card">
+            <h3>Total Bed Capacity</h3>
+            <strong>48</strong>
+        </div>
 
-            <div class="room-summary-card">
-                <h3>Total Rooms Listed</h3>
-                <strong>6</strong>
-            </div>
+        <div class="room-summary-card">
+            <h3>Available Beds</h3>
+            <strong>46</strong>
+        </div>
 
-            <div class="room-summary-card">
-                <h3>Total Bed Capacity</h3>
-                <strong>24</strong>
-            </div>
+    </section>
 
-            <div class="room-summary-card">
-                <h3>Available Beds</h3>
-                <strong>8</strong>
-            </div>
+    <section class="room-table-container">
+        <h2>Room Information</h2>
 
-        </section>
+        <table class="room-table">
+            <thead>
+                <tr>
+                    <th>Room Number</th>
+                    <th>Floor</th>
+                    <th>Capacity</th>
+                    <th>Occupied Beds</th>
+                    <th>Available Beds</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
 
-        <section class="room-table-container">
-            <h2>Room Information</h2>
+            <tbody>
+                <!-- First Floor -->
+                <tr>
+                    <td>101</td>
+                    <td>1st Floor</td>
+                    <td>4</td>
+                    <td>1</td>
+                    <td>3</td>
+                    <td><span class="status-available">Available</span></td>
+                </tr>
 
-            <table class="room-table">
-                <thead>
-                    <tr>
-                        <th>Room Number</th>
-                        <th>Floor</th>
-                        <th>Capacity</th>
-                        <th>Occupied Beds</th>
-                        <th>Available Beds</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
+                <tr>
+                    <td>102</td>
+                    <td>1st Floor</td>
+                    <td>4</td>
+                    <td>0</td>
+                    <td>4</td>
+                    <td><span class="status-available">Available</span></td>
+                </tr>
 
-                <tbody>
-                    <tr>
-                        <td>101</td>
-                        <td>1st Floor</td>
-                        <td>4</td>
-                        <td>4</td>
-                        <td>0</td>
-                        <td><span class="status-full">Full</span></td>
-                    </tr>
+                <tr>
+                    <td>103</td>
+                    <td>1st Floor</td>
+                    <td>4</td>
+                    <td>0</td>
+                    <td>4</td>
+                    <td><span class="status-available">Available</span></td>
+                </tr>
 
-                    <tr>
-                        <td>102</td>
-                        <td>1st Floor</td>
-                        <td>4</td>
-                        <td>2</td>
-                        <td>2</td>
-                        <td><span class="status-available">Available</span></td>
-                    </tr>
+                <tr>
+                    <td>104</td>
+                    <td>1st Floor</td>
+                    <td>4</td>
+                    <td>0</td>
+                    <td>4</td>
+                    <td><span class="status-available">Available</span></td>
+                </tr>
 
-                    <tr>
-                        <td>201</td>
-                        <td>2nd Floor</td>
-                        <td>4</td>
-                        <td>4</td>
-                        <td>0</td>
-                        <td><span class="status-full">Full</span></td>
-                    </tr>
+                <!-- Second Floor -->
+                <tr>
+                    <td>201</td>
+                    <td>2nd Floor</td>
+                    <td>4</td>
+                    <td>0</td>
+                    <td>4</td>
+                    <td><span class="status-available">Available</span></td>
+                </tr>
 
-                    <tr>
-                        <td>202</td>
-                        <td>2nd Floor</td>
-                        <td>4</td>
-                        <td>3</td>
-                        <td>1</td>
-                        <td><span class="status-available">Available</span></td>
-                    </tr>
+                <tr>
+                    <td>202</td>
+                    <td>2nd Floor</td>
+                    <td>4</td>
+                    <td>1</td>
+                    <td>3</td>
+                    <td><span class="status-available">Available</span></td>
+                </tr>
 
-                    <tr>
-                        <td>301</td>
-                        <td>3rd Floor</td>
-                        <td>4</td>
-                        <td>2</td>
-                        <td>2</td>
-                        <td><span class="status-available">Available</span></td>
-                    </tr>
+                <tr>
+                    <td>203</td>
+                    <td>2nd Floor</td>
+                    <td>4</td>
+                    <td>0</td>
+                    <td>4</td>
+                    <td><span class="status-available">Available</span></td>
+                </tr>
 
-                    <tr>
-                        <td>302</td>
-                        <td>3rd Floor</td>
-                        <td>4</td>
-                        <td>1</td>
-                        <td>3</td>
-                        <td><span class="status-available">Available</span></td>
-                    </tr>
-                </tbody>
-            </table>
-        </section>
+                <!-- Third Floor -->
+                <tr>
+                    <td>301</td>
+                    <td>3rd Floor</td>
+                    <td>4</td>
+                    <td>0</td>
+                    <td>4</td>
+                    <td><span class="status-available">Available</span></td>
+                </tr>
 
-        <p style="text-align:center; color:#666; margin-top:20px;">
-            Note: The room numbers and occupancy details are demonstration data.
-        </p>
+                <tr>
+                    <td>302</td>
+                    <td>3rd Floor</td>
+                    <td>4</td>
+                    <td>0</td>
+                    <td>4</td>
+                    <td><span class="status-available">Available</span></td>
+                </tr>
 
-    </main>
+                <tr>
+                    <td>303</td>
+                    <td>3rd Floor</td>
+                    <td>4</td>
+                    <td>0</td>
+                    <td>4</td>
+                    <td><span class="status-available">Available</span></td>
+                </tr>
+
+                <tr>
+                    <td>304</td>
+                    <td>3rd Floor</td>
+                    <td>4</td>
+                    <td>0</td>
+                    <td>4</td>
+                    <td><span class="status-available">Available</span></td>
+                </tr>
+
+                <!-- Fourth Floor -->
+                <tr>
+                    <td>401</td>
+                    <td>4th Floor</td>
+                    <td>4</td>
+                    <td>0</td>
+                    <td>4</td>
+                    <td><span class="status-available">Available</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+</main>
 
 </body>
 </html>
