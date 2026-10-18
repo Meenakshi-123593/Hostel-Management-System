@@ -1,10 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NGI Hostel Management - Admin Dashboard</title>
-
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial,sans-serif;background:#f3f6fb;color:#263247}
@@ -13,280 +11,239 @@ header h1{margin:0;font-size:23px}
 header p{margin:7px 0 0}
 .container{max-width:1200px;margin:25px auto;padding:0 16px}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:15px}
-.card{background:white;padding:20px;border-radius:12px;box-shadow:0 3px 12px #0000000c}
+.card,.section{background:white;padding:20px;border-radius:12px;box-shadow:0 3px 12px #0000000c}
 .card h3{margin:0 0 12px;font-size:15px;color:#53657d}
 .number{font-size:28px;font-weight:bold;color:#12366b}
-button{border:0;padding:10px 15px;border-radius:6px;background:#174b91;color:white;cursor:pointer}
+button{border:0;padding:9px 12px;border-radius:6px;background:#174b91;color:white;cursor:pointer;margin:3px}
 button:hover{background:#0c3267}
-.section{background:white;margin-top:22px;padding:20px;border-radius:12px;box-shadow:0 3px 12px #0000000c}
+.reject{background:#b42318}
+.approve{background:#16804a}
+.section{margin-top:22px;overflow:hidden}
 .section h2{margin-top:0}
 .toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 #status{margin:14px 0;padding:12px;background:#eef4ff;border-radius:7px;overflow-wrap:anywhere}
 .table-wrap{overflow-x:auto}
 table{width:100%;border-collapse:collapse;min-width:650px}
-th,td{padding:12px;text-align:left;border-bottom:1px solid #e7ebf1;font-size:14px}
+th,td{padding:12px;text-align:left;border-bottom:1px solid #e7ebf1;font-size:14px;vertical-align:top}
 th{background:#f2f5fa}
+td.description{white-space:pre-wrap;min-width:220px;max-width:400px;overflow-wrap:anywhere}
 .error{background:#fff0f0!important;color:#a32222}
 .empty{text-align:center;padding:25px;color:#68778c}
+.message{padding:12px;background:#eef4ff;border-radius:7px;margin:8px 0}
 @media(max-width:600px){header h1{font-size:19px}.section{padding:14px}}
 </style>
 </head>
-
 <body>
 <header>
-    <h1>NGI Hostel Management System</h1>
-    <p>Administrator Dashboard</p>
-</header>
+<h1>NGI Hostel Management System</h1>
+<p>Administrator Dashboard</p>
+</header><main class="container">
+<div class="cards">
+<div class="card"><h3>Registered Students</h3><div class="number" id="studentCount">—</div></div>
+<div class="card"><h3>Outpass Applications</h3><div class="number" id="outpassCount">—</div></div>
+<div class="card"><h3>Complaints</h3><div class="number" id="complaintCount">—</div></div>
+<div class="card"><h3>Attendance Records</h3><div class="number" id="attendanceCount">—</div></div>
+<div class="card"><h3>Fee Records</h3><div class="number" id="feesCount">—</div></div>
+</div><section class="section">
+<div class="toolbar"><h2>Registered Students</h2><button onclick="loadStudents()">Refresh Students</button></div>
+<div id="status">Loading student records...</div>
+<div class="table-wrap"><table>
+<thead><tr><th>Student ID</th><th>Name</th><th>Email</th><th>Department</th><th>Year</th><th>Room</th></tr></thead>
+<tbody id="studentsTable"><tr><td colspan="6" class="empty">Loading...</td></tr></tbody>
+</table></div>
+</section><section class="section">
+<div class="toolbar"><h2>Outpass Applications</h2><button onclick="loadOutpasses()">Refresh</button></div>
+<div id="outpassList">Loading...</div>
+</section><section class="section">
+<div class="toolbar"><h2>Student Complaints — Full Details</h2><button onclick="loadComplaints()">Refresh</button></div>
+<div id="complaintList">Loading...</div>
+</section><section class="section">
+<div class="toolbar"><h2>Attendance</h2><button onclick="loadAttendance()">Refresh</button></div>
+<div id="attendanceList">Loading...</div>
+</section><section class="section">
+<div class="toolbar"><h2>Fees</h2><button onclick="loadFees()">Refresh</button></div>
+<div id="feesList">Loading...</div>
+</section>
+</main><script>
+const API="https://hostel-management-system-api-426c.onrender.com";
 
-<main class="container">
-
-    <div class="cards">
-        <div class="card">
-            <h3>Registered Students</h3>
-            <div class="number" id="studentCount">—</div>
-        </div>
-        <div class="card">
-            <h3>Outpass Applications</h3>
-            <div class="number" id="outpassCount">—</div>
-        </div>
-        <div class="card">
-            <h3>Complaints</h3>
-            <div class="number" id="complaintCount">—</div>
-        </div>
-    </div>
-
-    <section class="section">
-        <div class="toolbar">
-            <h2>Registered Students</h2>
-            <button onclick="loadStudents()">Refresh Students</button>
-        </div>
-
-        <div id="status">Loading student records...</div>
-
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Student ID</th>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Department</th>
-                        <th>Year</th>
-                        <th>Room</th>
-                    </tr>
-                </thead>
-                <tbody id="studentsTable">
-                    <tr><td colspan="6" class="empty">Loading...</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </section>
-
-    <section class="section">
-        <h2>Outpass Applications</h2>
-        <div id="outpassList">Loading applications...</div>
-    </section>
-
-    <section class="section">
-        <h2>Student Complaints</h2>
-        <div id="complaintList">Loading complaints...</div>
-    </section>
-
-    <section class="section">
-        <h2>Attendance</h2>
-        <div id="attendanceList">Use the backend attendance endpoint to load records.</div>
-    </section>
-
-    <section class="section">
-        <h2>Fees</h2>
-        <div id="feesList">Use the backend fees endpoint to load records.</div>
-    </section>
-
-</main>
-
-<script>
-const API = "https://hostel-management-system-api-426c.onrender.com";
-
-function getAdminToken() {
-    const keys = [
-        "adminToken", "admin_token", "admin_token_key",
-        "token", "authToken", "access_token"
-    ];
-
-    for (const key of keys) {
-        const value = localStorage.getItem(key) ||
-                      sessionStorage.getItem(key);
-        if (value) return value;
+function getAdminToken(){
+    for(const key of ["adminToken","admin_token","admin_token_key","token","authToken","access_token"]){
+        const value=localStorage.getItem(key)||sessionStorage.getItem(key);
+        if(value)return value;
     }
-
     return "";
 }
 
-async function apiGet(path) {
-    const token = getAdminToken();
+async function apiRequest(path,options={}){
+    const token=getAdminToken();
+    const headers={...(options.headers||{})};
+    if(token)headers.Authorization="Bearer "+token;
+    if(options.body)headers["Content-Type"]="application/json";
 
-    const headers = {};
-    if (token) headers["Authorization"] = "Bearer " + token;
-
-    const response = await fetch(API + path, { headers });
-
-    const text = await response.text();
-    let data;
-
-    try {
-        data = JSON.parse(text);
-    } catch {
-        throw new Error("Backend returned an invalid response.");
+    const response=await fetch(API+path,{...options,headers});
+    const text=await response.text();
+    let data={};
+    try{data=JSON.parse(text)}catch{}
+    if(!response.ok){
+        throw new Error(data.message||data.error||"Request failed ("+response.status+")");
     }
-
-    if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-            throw new Error("Admin authentication failed. Please log in again.");
-        }
-
-        throw new Error(data.message || data.error ||
-                        "Request failed: " + response.status);
-    }
-
     return data;
 }
 
-function showError(elementId, message) {
-    const element = document.getElementById(elementId);
-    element.className = "error";
-    element.textContent = message;
+function esc(value){
+    return String(value??"—").replace(/[&<>"']/g,c=>({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    })[c]);
 }
 
-function renderTableRows(items, columns) {
-    if (!Array.isArray(items) || items.length === 0) {
-        return '<tr><td colspan="' + columns.length +
-               '" class="empty">No records found.</td></tr>';
+function getItems(data,key){
+    if(Array.isArray(data))return data;
+    if(Array.isArray(data[key]))return data[key];
+    if(Array.isArray(data.items))return data.items;
+    if(Array.isArray(data.data))return data.data;
+    return [];
+}
+
+function renderTable(elementId,items,columns,emptyMessage="No records found.",actions=null){
+    const target=document.getElementById(elementId);
+    if(!items.length){
+        target.innerHTML='<div class="message">'+esc(emptyMessage)+'</div>';
+        return;
     }
 
-    return items.map(item => '<tr>' +
-        columns.map(column =>
-            '<td>' + escapeHTML(item[column] ?? "—") + '</td>'
-        ).join("") +
-        '</tr>').join("");
+    let html='<div class="table-wrap"><table><thead><tr>';
+    columns.forEach(c=>html+='<th>'+esc(c.label)+'</th>');
+    if(actions)html+='<th>Action</th>';
+    html+='</tr></thead><tbody>';
+
+    items.forEach(item=>{
+        html+='<tr>';
+        columns.forEach(c=>{
+            const value=item[c.key];
+            html+='<td class="'+(c.key==="description"||c.key==="reason"?"description":"")+'">'+esc(value)+'</td>';
+        });
+        if(actions)html+='<td>'+actions(item)+'</td>';
+        html+='</tr>';
+    });
+    html+='</tbody></table></div>';
+    target.innerHTML=html;
 }
 
-function escapeHTML(value) {
-    return String(value).replace(/[&<>"']/g, char => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;"
-    })[char]);
+async function loadStudents(){
+    const status=document.getElementById("status");
+    const table=document.getElementById("studentsTable");
+    status.className="";
+    status.textContent="Loading student records...";
+    try{
+        const data=await apiRequest("/api/admin/students");
+        const students=getItems(data,"students");
+        document.getElementById("studentCount").textContent=data.count??students.length;
+        table.innerHTML=students.length?students.map(s=>'<tr>'+
+            ['student_id','name','email','department','year','room_number']
+            .map(k=>'<td>'+esc(s[k])+'</td>').join('')+'</tr>').join('')
+            :'<tr><td colspan="6" class="empty">No registered students found.</td></tr>';
+        status.textContent="Loaded "+students.length+" student record(s).";
+    }catch(e){
+        table.innerHTML='<tr><td colspan="6" class="empty">Unable to load students.</td></tr>';
+        status.className="error";
+        status.textContent=e.message;
+    }
 }
 
-async function loadStudents() {
-    const status = document.getElementById("status");
-    const table = document.getElementById("studentsTable");
+async function loadOutpasses(){
+    const target="outpassList";
+    try{
+        const data=await apiRequest("/api/admin/outpasses");
+        const items=getItems(data,"outpasses");
+        document.getElementById("outpassCount").textContent=data.count??items.length;
+        renderTable(target,items,[
+            {key:"student_id",label:"Student ID"},
+            {key:"student_name",label:"Student Name"},
+            {key:"reason",label:"Reason"},
+            {key:"destination",label:"Destination"},
+            {key:"from_date",label:"From"},
+            {key:"to_date",label:"To"},
+            {key:"status",label:"Status"},
+            {key:"created_at",label:"Applied On"}
+        ],"No outpass applications found.",item=>{
+            const id=Number(item.id);
+            if(!Number.isInteger(id)||id<=0)return "";
+            return '<button class="approve" onclick="updateOutpass('+id+',\\'Approved\\')">Approve</button>'+
+                   '<button class="reject" onclick="updateOutpass('+id+',\\'Rejected\\')">Reject</button>';
+        });
+    }catch(e){document.getElementById(target).innerHTML='<div class="error message">'+esc(e.message)+'</div>'}
+}
 
-    status.className = "";
-    status.textContent = "Loading student records...";
-    table.innerHTML = '<tr><td colspan="6">Loading...</td></tr>';
+async function updateOutpass(id,status){
+    try{
+        await apiRequest("/api/admin/outpasses/"+id+"/status",{
+            method:"POST",body:JSON.stringify({status})
+        });
+        alert("Outpass status updated to "+status+".");
+        await loadOutpasses();
+    }catch(e){alert("Could not update outpass: "+e.message)}
+}
 
-    try {
-        const data = await apiGet("/api/admin/students");
-
-        const students = Array.isArray(data)
-            ? data
-            : data.students || data.data || [];
-
-        if (!Array.isArray(students)) {
-            throw new Error("Unexpected student records format.");
-        }
-
-        document.getElementById("studentCount").textContent =
-            data.count ?? students.length;
-
-        table.innerHTML = renderTableRows(students, [
-            "student_id", "name", "email", "department", "year",
-            "room_number"
+async function loadComplaints(){
+    const target="complaintList";
+    try{
+        const data=await apiRequest("/api/admin/complaints");
+        const items=getItems(data,"complaints");
+        document.getElementById("complaintCount").textContent=data.count??items.length;
+        renderTable(target,items,[
+            {key:"student_id",label:"Student ID"},
+            {key:"student_name",label:"Student Name"},
+            {key:"category",label:"Category"},
+            {key:"description",label:"Complete Complaint Details"},
+            {key:"status",label:"Status"},
+            {key:"created_at",label:"Submitted On"}
         ]);
-
-        status.textContent = students.length
-            ? "Successfully loaded " + students.length + " student record(s)."
-            : "The API returned zero students. Existing records may be in a different database.";
-
-    } catch (error) {
-        table.innerHTML =
-            '<tr><td colspan="6" class="empty">Could not load records.</td></tr>';
-
-        showError("status", error.message);
-    }
+    }catch(e){document.getElementById(target).innerHTML='<div class="error message">'+esc(e.message)+'</div>'}
 }
 
-async function loadList(path, elementId, countId) {
-    try {
-        const data = await apiGet(path);
-        const items = Array.isArray(data)
-            ? data
-            : data.items || data.outpasses || data.complaints ||
-              data.attendance || data.fees || data.data || [];
-
-        if (countId) {
-            document.getElementById(countId).textContent =
-                data.count ?? items.length;
-        }
-
-        const target = document.getElementById(elementId);
-
-        if (!Array.isArray(items) || items.length === 0) {
-            target.textContent = "No records found.";
-            return;
-        }
-
-        const table = document.createElement("table");
-        const header = document.createElement("tr");
-
-        const columns = Object.keys(items[0]);
-        columns.forEach(column => {
-            const th = document.createElement("th");
-            th.textContent = column.replaceAll("_", " ");
-            header.appendChild(th);
-        });
-
-        const thead = document.createElement("thead");
-        thead.appendChild(header);
-        table.appendChild(thead);
-
-        const tbody = document.createElement("tbody");
-
-        items.forEach(item => {
-            const tr = document.createElement("tr");
-
-            columns.forEach(column => {
-                const td = document.createElement("td");
-                td.textContent = item[column] ?? "—";
-                tr.appendChild(td);
-            });
-
-            tbody.appendChild(tr);
-        });
-
-        table.appendChild(tbody);
-        target.replaceChildren(table);
-
-    } catch (error) {
-        document.getElementById(elementId).textContent = error.message;
-    }
+async function loadAttendance(){
+    const target="attendanceList";
+    try{
+        const data=await apiRequest("/api/admin/attendance");
+        const items=getItems(data,"attendance");
+        document.getElementById("attendanceCount").textContent=data.count??items.length;
+        renderTable(target,items,[
+            {key:"student_id",label:"Student ID"},
+            {key:"student_name",label:"Student Name"},
+            {key:"attendance_date",label:"Date"},
+            {key:"status",label:"Attendance"}
+        ]);
+    }catch(e){document.getElementById(target).innerHTML='<div class="error message">'+esc(e.message)+'</div>'}
 }
 
-async function loadDashboard() {
-    await loadStudents();
+async function loadFees(){
+    const target="feesList";
+    try{
+        const data=await apiRequest("/api/admin/fees");
+        const items=getItems(data,"fees");
+        document.getElementById("feesCount").textContent=data.count??items.length;
+        renderTable(target,items,[
+            {key:"student_id",label:"Student ID"},
+            {key:"student_name",label:"Student Name"},
+            {key:"total_amount",label:"Total Fees"},
+            {key:"paid_amount",label:"Amount Paid"},
+            {key:"balance",label:"Balance"},
+            {key:"status",label:"Payment Status"},
+            {key:"updated_at",label:"Updated On"}
+        ]);
+    }catch(e){document.getElementById(target).innerHTML='<div class="error message">'+esc(e.message)+'</div>'}
+}
 
+async function loadDashboard(){
     await Promise.all([
-        loadList("/api/admin/outpasses", "outpassList", "outpassCount"),
-        loadList("/api/admin/complaints", "complaintList", "complaintCount"),
-        loadList("/api/admin/attendance", "attendanceList"),
-        loadList("/api/admin/fees", "feesList")
+        loadStudents(),
+        loadOutpasses(),
+        loadComplaints(),
+        loadAttendance(),
+        loadFees()
     ]);
 }
-
 loadDashboard();
-</script>
-</body>
+</script></body>
 </html>
