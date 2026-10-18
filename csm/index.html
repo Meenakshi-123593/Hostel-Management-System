@@ -3,139 +3,129 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nehru Group of Institutions</title>
-    <link rel="stylesheet" href="style.css">
-</head><body class="college-home-page"><!-- COLLEGE HEADER -->
-<header class="college-header">
+    <link rel="stylesheet" href="style.css"><style>
+    .portal-options {
+        display: flex;
+        justify-content: center;
+        gap: 18px;
+        flex-wrap: wrap;
+        margin-top: 25px;
+    }
 
+    .portal-button {
+        display: inline-block;
+        padding: 12px 24px;
+        text-decoration: none;
+        border-radius: 6px;
+        font-weight: bold;
+    }
+
+    .admin-button {
+        background: #172554;
+        color: white;
+    }
+
+    .student-button {
+        background: #ffffff;
+        color: #172554;
+        border: 2px solid #172554;
+    }
+</style>
+
+</head><body class="college-home-page"><header class="college-header">
     <div class="college-logo">
         <img src="ngi-logo.png" alt="NGI Logo"
              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
         <span class="college-logo-text">NGI</span>
-    </div>
+    </div><div class="college-info">
+    <h1>NEHRU GROUP OF INSTITUTIONS</h1>
+    <p>Coimbatore, Tamil Nadu</p>
+    <p><strong>Phone:</strong> 049199999</p>
+</div>
 
-    <div class="college-info">
-        <h1>NEHRU GROUP OF INSTITUTIONS</h1>
-        <p>Coimbatore, Tamil Nadu</p>
-        <p><strong>Phone:</strong> 049199999</p>
-    </div>
-
-</header>
-
-<!-- NAVIGATION -->
-<nav class="college-nav">
+</header><nav class="college-nav">
     <a href="index.html">Home</a>
     <a href="#about">About Us</a>
     <a href="#leadership">Leadership</a>
-    <a href="login.html">Hostel Portal</a>
-</nav>
-
-<!-- WELCOME SECTION -->
-<section class="welcome-section" id="about">
-
+    <a href="login.html">Student Portal</a>
+    <a href="adminlogin.html">Admin Login</a>
+</nav><section class="welcome-section" id="about">
     <div class="welcome-content">
-        <h2>Learning Today, Leading Tomorrow</h2>
+        <h2>Learning Today, Leading Tomorrow</h2>    <p>
+        Welcome to Nehru Group of Institutions.
+        We are committed to providing quality education,
+        developing professional skills and building
+        a successful future for our students.
+    </p>
 
-        <p>
-            Welcome to Nehru Group of Institutions.
-            We are committed to providing quality education,
-            developing professional skills and building
-            a successful future for our students.
-        </p>
+    <div class="portal-options">
+        <a href="login.html" class="portal-button student-button">
+            Student Login →
+        </a>
 
-        <a href="login.html" class="portal-button">
-            Open Hostel Portal →
+        <a href="adminlogin.html" class="portal-button admin-button">
+            Admin Login →
         </a>
     </div>
+</div>
 
-</section>
+</section><section class="management-section" id="leadership">
+    <h2>Our Leadership</h2><p class="management-subtitle">
+    Meet the leaders of Nehru Group of Institutions
+</p>
 
-<!-- LEADERSHIP SECTION -->
-<section class="management-section" id="leadership">
-
-    <h2>Our Leadership</h2>
-
-    <p class="management-subtitle">
-        Meet the leaders of Nehru Group of Institutions
-    </p>
-
-    <div class="leader-container">
-
-        <!-- CHAIRMAN -->
-        <div class="leader-card">
-
-            <div class="leader-photo">
-
-                <div class="person-head"></div>
-
-                <div class="person-body"></div>
-
-            </div>
-
-            <h3>Krishnadas</h3>
-
-            <p class="leader-role">Chairman</p>
-
-            <p>
-                Providing leadership and guidance towards
-                educational excellence and institutional growth.
-            </p>
-
+<div class="leader-container">
+    <div class="leader-card">
+        <div class="leader-photo">
+            <div class="person-head"></div>
+            <div class="person-body"></div>
         </div>
 
-        <!-- CEO -->
-        <div class="leader-card">
+        <h3>Krishnadas</h3>
+        <p class="leader-role">Chairman</p>
 
-            <div class="leader-photo">
-
-                <div class="person-head"></div>
-
-                <div class="person-body"></div>
-
-            </div>
-
-            <h3>Krishna Kumar</h3>
-
-            <p class="leader-role">Chief Executive Officer (CEO)</p>
-
-            <p>
-                Supporting institutional development and
-                creating opportunities for student success.
-            </p>
-
-        </div>
-
+        <p>
+            Providing leadership and guidance towards
+            educational excellence and institutional growth.
+        </p>
     </div>
 
-</section>
+    <div class="leader-card">
+        <div class="leader-photo">
+            <div class="person-head"></div>
+            <div class="person-body"></div>
+        </div>
 
-<!-- HOSTEL PORTAL SECTION -->
-<section class="hostel-portal-section">
+        <h3>Krishna Kumar</h3>
+        <p class="leader-role">Chief Executive Officer (CEO)</p>
 
-    <h2>Hostel Management Portal</h2>
+        <p>
+            Supporting institutional development and
+            creating opportunities for student success.
+        </p>
+    </div>
+</div>
 
-    <p>
-        Access hostel information, room allocation,
-        food menus, fees, attendance and other hostel services.
-    </p>
+</section><section class="hostel-portal-section">
+    <h2>Hostel Management Portal</h2><p>
+    Access hostel information, room allocation,
+    food menus, fees, attendance and other hostel services.
+</p>
 
-    <a href="login.html" class="portal-button">
-        Enter Hostel Portal →
+<div class="portal-options">
+    <a href="login.html" class="portal-button student-button">
+        Student Portal →
     </a>
 
-</section>
+    <a href="adminlogin.html" class="portal-button admin-button">
+        Admin Portal →
+    </a>
+</div>
 
-<!-- FOOTER -->
-<footer class="college-footer">
-
+</section><footer class="college-footer">
     <h3>NEHRU GROUP OF INSTITUTIONS</h3>
-
     <p>Coimbatore, Tamil Nadu</p>
-
     <p>Contact: 049199999</p>
-
     <p>© 2026 Nehru Group of Institutions. All rights reserved.</p>
-
-</footer>
-
-</body>
+</footer></body>
 </html>
