@@ -1,97 +1,167 @@
 <!DOCTYPE html><html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hostel Complaints</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hostel Complaints</title>
+<link rel="stylesheet" href="style.css">
+<style>
+body{font-family:Arial,sans-serif;margin:0;background:#f3f6fb;color:#263247}
+header{background:#12366b;color:white;padding:20px;text-align:center}
+main{max-width:650px;margin:25px auto;padding:20px;background:white;border-radius:10px}
+label{display:block;margin-top:14px;font-weight:bold}
+input,select,textarea{width:100%;padding:10px;margin-top:6px;box-sizing:border-box}
+button{padding:11px 16px;margin-top:16px;border:0;border-radius:5px;background:#12366b;color:white;cursor:pointer}
+.record{border:1px solid #ddd;border-radius:6px;padding:12px;margin:12px 0;overflow-wrap:anywhere}
+</style>
 </head>
-<body><header>
-    <h1>Hostel Management System</h1>
-    <p>Complaint Management</p>
+<body>
+<header>
+<h1>Hostel Management System</h1>
+<p>Complaint Management</p>
 </header><main>
-    <h2>Raise a Complaint</h2><form id="complaintForm">
-    <label for="studentName">Student Name:</label>
-    <input id="studentName" required>
+<h2>Raise a Complaint</h2><form id="complaintForm">
+<label for="studentId">Student ID:</label>
+<input id="studentId" required placeholder="Enter your registered Student ID"><label for="category">Complaint Category:</label>
+<select id="category" required>
 
-    <label for="roomNumber">Room Number:</label>
-    <input id="roomNumber" required>
+<option value="">Select Category</option>
+<option>Room Maintenance</option>
+<option>Food Quality</option>
+<option>Water Supply</option>
+<option>Cleanliness</option>
+<option>Electricity</option>
+<option>Other</option>
+</select><label for="description">Complaint Description:</label>
 
-    <label for="category">Complaint Category:</label>
-    <select id="category" required>
-        <option value="">Select Category</option>
-        <option>Room Maintenance</option>
-        <option>Food Quality</option>
-        <option>Water Supply</option>
-        <option>Cleanliness</option>
-        <option>Electricity</option>
-        <option>Other</option>
-    </select>
+<textarea id="description" rows="4" required></textarea><button type="submit" id="submitButton">Submit Complaint</button>
 
-    <label for="description">Complaint Description:</label>
-    <textarea id="description" rows="4" required></textarea>
-
-    <button type="submit">Submit Complaint</button>
-    <p id="complaintMessage"></p>
-</form>
-
-<section class="panel">
-    <h2>Complaint History</h2>
-    <div id="complaintHistory">No complaints submitted yet.</div>
-</section>
-
-<button onclick="location.href='dashboard.html'">
-    Back to Dashboard
-</button>
+<p id="complaintMessage" role="status"></p>
+</form><section class="panel">
+<h2>Complaint History</h2>
+<button type="button" id="refreshButton">Refresh History</button>
+<div id="complaintHistory">Loading complaints...</div>
+</section><button type="button" onclick="location.href='dashboard.html'">Back to Dashboard</button>
 
 </main><script>
-function getComplaints() {
-    return JSON.parse(localStorage.getItem("hostelComplaints") || "[]");
+const API_BASE = "https://hostel-management-system-api-426c.onrender.com";
+
+function findStudentId() {
+    const keys = ["student_id", "studentId", "loggedInStudentId", "currentStudentId", "username"];
+    for (const key of keys) {
+        const value = localStorage.getItem(key) || sessionStorage.getItem(key);
+        if (value && /^STU\d+$/i.test(value.trim())) return value.trim();
+    }
+    return "";
 }
 
-document.getElementById("complaintForm").addEventListener("submit", function(event) {
+function getToken() {
+    const keys = ["studentToken", "student_token", "token", "authToken", "access_token"];
+    for (const key of keys) {
+        const value = localStorage.getItem(key) || sessionStorage.getItem(key);
+        if (value) return value;
+    }
+    return "";
+}
+
+function safe(value) {
+    return String(value ?? "").replace(/[&<>"']/g, c => ({
+        "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+    })[c]);
+}
+
+const studentInput = document.getElementById("studentId");
+studentInput.value = findStudentId();
+
+document.getElementById("complaintForm").addEventListener("submit", async function(event) {
     event.preventDefault();
 
-    const complaint = {
-        student: document.getElementById("studentName").value,
-        room: document.getElementById("roomNumber").value,
-        category: document.getElementById("category").value,
-        description: document.getElementById("description").value,
-        date: new Date().toLocaleDateString(),
-        status: "Pending"
-    };
+    const studentId = studentInput.value.trim();
+    const category = document.getElementById("category").value;
+    const description = document.getElementById("description").value.trim();
+    const message = document.getElementById("complaintMessage");
+    const button = document.getElementById("submitButton");
 
-    const records = getComplaints();
-    records.push(complaint);
-    localStorage.setItem("hostelComplaints", JSON.stringify(records));
-
-    document.getElementById("complaintMessage").textContent =
-        "Complaint submitted successfully in this browser.";
-
-    this.reset();
-    showComplaints();
-});
-
-function showComplaints() {
-    const records = getComplaints();
-    const history = document.getElementById("complaintHistory");
-
-    if (records.length === 0) {
-        history.textContent = "No complaints submitted yet.";
+    if (!studentId) {
+        message.textContent = "Enter your registered Student ID.";
         return;
     }
 
-    history.innerHTML = records.slice().reverse().map(record => `
-        <div class="record">
-            <h3>${record.category}</h3>
-            <p><strong>Student:</strong> ${record.student}</p>
-            <p><strong>Room:</strong> ${record.room}</p>
-            <p><strong>Description:</strong> ${record.description}</p>
-            <p><strong>Date:</strong> ${record.date}</p>
-            <p><strong>Status:</strong> ${record.status}</p>
-        </div>
-    `).join("");
+    button.disabled = true;
+    message.textContent = "Submitting complaint...";
+
+    try {
+        const response = await fetch(API_BASE + "/api/complaints", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                ...(getToken() ? {"Authorization": "Bearer " + getToken()} : {})
+            },
+            body: JSON.stringify({
+                student_id: studentId,
+                category: category,
+                description: description
+            })
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(data.error || data.message || "Request failed (" + response.status + ").");
+        }
+
+        message.textContent = data.message || "Complaint submitted successfully.";
+        document.getElementById("description").value = "";
+        document.getElementById("category").value = "";
+        await showComplaints();
+    } catch (error) {
+        message.textContent = "Could not submit complaint: " + error.message;
+    } finally {
+        button.disabled = false;
+    }
+});
+
+async function showComplaints() {
+    const history = document.getElementById("complaintHistory");
+    const studentId = studentInput.value.trim();
+
+    if (!studentId) {
+        history.textContent = "Enter your registered Student ID to view complaint history.";
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            API_BASE + "/api/complaints?student_id=" + encodeURIComponent(studentId),
+            {headers: getToken() ? {"Authorization":"Bearer " + getToken()} : {}}
+        );
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(data.error || data.message || "Could not load complaint history.");
+        }
+
+        const records = Array.isArray(data) ? data : (data.complaints || data.records || []);
+
+        if (!records.length) {
+            history.textContent = "No complaints submitted yet.";
+            return;
+        }
+
+        history.innerHTML = records.slice().reverse().map(record => `
+            <div class="record">
+                <h3>${safe(record.category)}</h3>
+                <p><strong>Description:</strong> ${safe(record.description)}</p>
+                <p><strong>Date:</strong> ${safe(record.created_at || record.date || "—")}</p>
+                <p><strong>Status:</strong> ${safe(record.status || "Pending")}</p>
+            </div>
+        `).join("");
+    } catch (error) {
+        history.textContent = "Could not load complaint history: " + error.message;
+    }
 }
 
+document.getElementById("refreshButton").addEventListener("click", showComplaints);
+studentInput.addEventListener("change", showComplaints);
 showComplaints();
 </script></body>
 </html>
