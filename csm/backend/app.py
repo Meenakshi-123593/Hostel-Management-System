@@ -104,7 +104,6 @@ def create_table():
             );
         """)
 
-        # Add missing student columns safely.
         student_columns = {
             row["name"]
             for row in connection.execute(
@@ -121,7 +120,6 @@ def create_table():
                     f"ALTER TABLE students ADD COLUMN {column} TEXT"
                 )
 
-        # Add academic_year to old payment history if necessary.
         payment_columns = {
             row["name"]
             for row in connection.execute(
@@ -134,8 +132,6 @@ def create_table():
                 "ALTER TABLE fee_payments ADD COLUMN academic_year INTEGER"
             )
 
-            # Associate historical payments with the student's
-            # currently registered year without deleting history.
             connection.execute("""
                 UPDATE fee_payments
                 SET academic_year = COALESCE(
@@ -150,8 +146,6 @@ def create_table():
                 WHERE academic_year IS NULL
             """)
 
-        # Migrate old fee records into the student's current year.
-        # INSERT OR IGNORE preserves any existing yearly fee records.
         connection.execute("""
             INSERT OR IGNORE INTO yearly_fees
                 (student_id, academic_year, total_amount, paid_amount)
@@ -204,7 +198,6 @@ def fee_status(total, paid):
 
 
 def ensure_yearly_fee_rows(connection, student_id):
-    """Create missing zero-value records without overwriting fees."""
     for year in range(1, 5):
         connection.execute("""
             INSERT OR IGNORE INTO yearly_fees
@@ -224,13 +217,14 @@ def get_year_fee(connection, student_id, year):
 def fee_record(row):
     total = float(row["total_amount"] or 0)
     paid = float(row["paid_amount"] or 0)
+    year = int(row["academic_year"])
 
     return {
         "id": row["id"],
         "student_id": row["student_id"],
-        "academic_year": int(row["academic_year"]),
-        "year": int(row["academic_year"]),
-        "year_label": year_label(int(row["academic_year"])),
+        "academic_year": year,
+        "year": year,
+        "year_label": year_label(year),
         "total_amount": total,
         "paid_amount": paid,
         "balance": max(total - paid, 0),
@@ -316,7 +310,6 @@ def require_admin():
 def admin_required(function):
     @wraps(function)
     def wrapper(*args, **kwargs):
-        # Allow browser CORS preflight requests before checking the token.
         if request.method == "OPTIONS":
             return "", 204
 
@@ -359,105 +352,7 @@ def home():
 
 # ==================== REGISTRATION ====================
 
-@app.route("/api/attendance", methods=["GET", "POST", "OPTIONS"])
-def student_attendance():
-    if request.method == "OPTIONS":
-        return "", 204
-
-    connection = get_db()
-
-    try:
-        if request.method == "POST":
-            data = read_json()
-
-            student_id = str(data.get("student_id", "")).strip()
-            attendance_date = str(
-                data.get("attendance_date", data.get("date", ""))
-            ).strip()
-            status = str(data.get("status", "")).strip().title()
-
-            if not student_id or not attendance_date:
-                return jsonify({
-                    "success": False,
-                    "message": "Student ID and date are required."
-                }), 400
-
-            try:
-                datetime.strptime(attendance_date, "%Y-%m-%d")
-            except ValueError:
-                return jsonify({
-                    "success": False,
-                    "message": "Date must use YYYY-MM-DD format."
-                }), 400
-
-            if status not in ["Present", "Absent"]:
-                return jsonify({
-                    "success": False,
-                    "message": "Choose Present or Absent."
-                }), 400
-
-            student = get_student(connection, student_id)
-
-            if not student:
-                return student_not_found()
-
-            connection.execute("""
-                INSERT INTO attendance (
-                    student_id, student_name, attendance_date, status
-                )
-                VALUES (?, ?, ?, ?)
-                ON CONFLICT(student_id, attendance_date)
-                DO UPDATE SET
-                    status = excluded.status,
-                    student_name = excluded.student_name
-            """, (
-                student_id,
-                student["name"],
-                attendance_date,
-                status
-            ))
-
-            connection.commit()
-
-            return jsonify({
-                "success": True,
-                "message": "Attendance saved successfully."
-            }), 201
-
-        student_id = request.args.get("student_id", "").strip()
-
-        if not student_id:
-            return jsonify({
-                "success": False,
-                "message": "Provide student_id."
-            }), 400
-
-        rows = connection.execute("""
-            SELECT *
-            FROM attendance
-            WHERE student_id = ?
-            ORDER BY attendance_date DESC
-        """, (student_id,)).fetchall()
-
-        records = [dict(row) for row in rows]
-
-        return jsonify({
-            "success": True,
-            "attendance": records,
-            "count": len(records)
-        })
-
-    except sqlite3.Error:
-        connection.rollback()
-        app.logger.exception("Student attendance error")
-
-        return jsonify({
-            "success": False,
-            "message": "Could not save or load attendance."
-        }), 500
-
-    finally:
-        connection.close()
+@app.route("/api/register", methods=["POST", "OPTIONS"])
 def register():
     if request.method == "OPTIONS":
         return "", 204
@@ -492,7 +387,10 @@ def register():
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            student_id, name, email, username,
+            student_id,
+            name,
+            email,
+            username,
             generate_password_hash(password),
             str(data.get("dob", "")),
             str(data.get("department", "")),
@@ -502,7 +400,6 @@ def register():
             str(data.get("phone", ""))
         ))
 
-        # Prepare four year-wise records for the new student.
         ensure_yearly_fee_rows(connection, student_id)
         connection.commit()
 
@@ -648,7 +545,8 @@ def admin_students():
         rows = connection.execute("""
             SELECT student_id, name, email, username, dob,
                    department, year, academic_year, room_number, phone
-            FROM students ORDER BY id DESC
+            FROM students
+            ORDER BY id DESC
         """).fetchall()
 
         students = [dict(row) for row in rows]
@@ -695,7 +593,9 @@ def outpasses():
                 )
                 VALUES (?, ?, ?, ?, ?, ?, 'Pending')
             """, (
-                student_id, student["name"], reason,
+                student_id,
+                student["name"],
+                reason,
                 str(data.get("destination", "")),
                 str(data.get("from_date", data.get("fromDate", ""))),
                 str(data.get("to_date", data.get("toDate", "")))
@@ -717,8 +617,10 @@ def outpasses():
             }), 400
 
         rows = connection.execute("""
-            SELECT * FROM outpasses
-            WHERE student_id = ? ORDER BY id DESC
+            SELECT *
+            FROM outpasses
+            WHERE student_id = ?
+            ORDER BY id DESC
         """, (student_id,)).fetchall()
 
         return jsonify({
@@ -829,7 +731,8 @@ def complaints():
                 )
                 VALUES (?, ?, ?, ?, 'Pending')
             """, (
-                student_id, student["name"],
+                student_id,
+                student["name"],
                 str(data.get("category", "General")),
                 description
             ))
@@ -850,8 +753,10 @@ def complaints():
             }), 400
 
         rows = connection.execute("""
-            SELECT * FROM complaints
-            WHERE student_id = ? ORDER BY id DESC
+            SELECT *
+            FROM complaints
+            WHERE student_id = ?
+            ORDER BY id DESC
         """, (student_id,)).fetchall()
 
         return jsonify({
@@ -928,45 +833,12 @@ def update_complaint(complaint_id):
         connection.close()
 
 
-# ==================== ATTENDANCE ====================
+# ==================== STUDENT ATTENDANCE ====================
+# IMPORTANT: This route is defined only ONCE.
+# Students can submit Present/Absent and view their own records.
 
-@app.route("/api/attendance", methods=["GET", "OPTIONS"])
+@app.route("/api/attendance", methods=["GET", "POST", "OPTIONS"])
 def student_attendance():
-    if request.method == "OPTIONS":
-        return "", 204
-
-    student_id = request.args.get("student_id", "").strip()
-
-    if not student_id:
-        return jsonify({
-            "success": False,
-            "message": "Provide student_id."
-        }), 400
-
-    connection = get_db()
-
-    try:
-        rows = connection.execute("""
-            SELECT * FROM attendance
-            WHERE student_id = ?
-            ORDER BY attendance_date DESC
-        """, (student_id,)).fetchall()
-
-        records = [dict(row) for row in rows]
-
-        return jsonify({
-            "success": True,
-            "attendance": records,
-            "count": len(records)
-        })
-
-    finally:
-        connection.close()
-
-
-@app.route("/api/admin/attendance", methods=["GET", "POST", "OPTIONS"])
-@admin_required
-def manage_attendance():
     if request.method == "OPTIONS":
         return "", 204
 
@@ -975,6 +847,7 @@ def manage_attendance():
     try:
         if request.method == "POST":
             data = read_json()
+
             student_id = str(data.get("student_id", "")).strip()
             attendance_date = str(
                 data.get("attendance_date", data.get("date", ""))
@@ -987,13 +860,22 @@ def manage_attendance():
                     "message": "Student ID and date are required."
                 }), 400
 
-            if status not in ["Present", "Absent", "Leave"]:
+            try:
+                datetime.strptime(attendance_date, "%Y-%m-%d")
+            except ValueError:
                 return jsonify({
                     "success": False,
-                    "message": "Status must be Present, Absent, or Leave."
+                    "message": "Date must use YYYY-MM-DD format."
+                }), 400
+
+            if status not in ["Present", "Absent"]:
+                return jsonify({
+                    "success": False,
+                    "message": "Choose Present or Absent."
                 }), 400
 
             student = get_student(connection, student_id)
+
             if not student:
                 return student_not_found()
 
@@ -1007,7 +889,114 @@ def manage_attendance():
                     status = excluded.status,
                     student_name = excluded.student_name
             """, (
-                student_id, student["name"], attendance_date, status
+                student_id,
+                student["name"],
+                attendance_date,
+                status
+            ))
+
+            connection.commit()
+
+            return jsonify({
+                "success": True,
+                "message": "Attendance saved successfully."
+            }), 201
+
+        student_id = request.args.get("student_id", "").strip()
+
+        if not student_id:
+            return jsonify({
+                "success": False,
+                "message": "Provide student_id."
+            }), 400
+
+        rows = connection.execute("""
+            SELECT *
+            FROM attendance
+            WHERE student_id = ?
+            ORDER BY attendance_date DESC
+        """, (student_id,)).fetchall()
+
+        records = [dict(row) for row in rows]
+
+        return jsonify({
+            "success": True,
+            "attendance": records,
+            "count": len(records)
+        })
+
+    except sqlite3.Error:
+        connection.rollback()
+        app.logger.exception("Student attendance error")
+
+        return jsonify({
+            "success": False,
+            "message": "Could not save or load attendance."
+        }), 500
+
+    finally:
+        connection.close()
+
+
+# ==================== ADMIN ATTENDANCE ====================
+
+@app.route("/api/admin/attendance", methods=["GET", "POST", "OPTIONS"])
+@admin_required
+def manage_attendance():
+    if request.method == "OPTIONS":
+        return "", 204
+
+    connection = get_db()
+
+    try:
+        if request.method == "POST":
+            data = read_json()
+
+            student_id = str(data.get("student_id", "")).strip()
+            attendance_date = str(
+                data.get("attendance_date", data.get("date", ""))
+            ).strip()
+            status = str(data.get("status", "")).strip().title()
+
+            if not student_id or not attendance_date:
+                return jsonify({
+                    "success": False,
+                    "message": "Student ID and date are required."
+                }), 400
+
+            try:
+                datetime.strptime(attendance_date, "%Y-%m-%d")
+            except ValueError:
+                return jsonify({
+                    "success": False,
+                    "message": "Date must use YYYY-MM-DD format."
+                }), 400
+
+            if status not in ["Present", "Absent", "Leave"]:
+                return jsonify({
+                    "success": False,
+                    "message": "Status must be Present, Absent, or Leave."
+                }), 400
+
+            student = get_student(connection, student_id)
+
+            if not student:
+                return student_not_found()
+
+            connection.execute("""
+                INSERT INTO attendance (
+                    student_id, student_name, attendance_date, status
+                )
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(student_id, attendance_date)
+                DO UPDATE SET
+                    status = excluded.status,
+                    student_name = excluded.student_name
+            """, (
+                student_id,
+                student["name"],
+                attendance_date,
+                status
             ))
 
             connection.commit()
@@ -1050,6 +1039,7 @@ def student_fees():
 
     try:
         student = get_student(connection, student_id)
+
         if not student:
             return student_not_found()
 
@@ -1074,8 +1064,8 @@ def student_fees():
             )
             payment["year_label"] = year_label(payment["academic_year"])
 
-        # Keep "fees" for compatibility with the older student page.
         current_year = valid_year(student["year"], 1)
+
         current_fee = next(
             item for item in totals["years"]
             if item["academic_year"] == current_year
@@ -1096,6 +1086,7 @@ def student_fees():
 
     except sqlite3.Error:
         app.logger.exception("Student fees error")
+
         return jsonify({
             "success": False,
             "message": "Could not load fee details."
@@ -1113,6 +1104,7 @@ def make_fee_payment():
         return "", 204
 
     data = read_json()
+
     student_id = str(data.get("student_id", "")).strip()
     payment_method = str(data.get("payment_method", "Other")).strip()
     academic_year = valid_year(data.get("academic_year"))
@@ -1135,6 +1127,7 @@ def make_fee_payment():
 
     try:
         student = get_student(connection, student_id)
+
         if not student:
             return student_not_found()
 
@@ -1165,7 +1158,6 @@ def make_fee_payment():
             "%Y%m%d%H%M%S%f"
         )
 
-        # This records a simulated payment, not a real bank transaction.
         connection.execute("""
             INSERT INTO fee_payments (
                 student_id, academic_year, amount, payment_method,
@@ -1173,8 +1165,11 @@ def make_fee_payment():
             )
             VALUES (?, ?, ?, ?, ?, 'Success')
         """, (
-            student_id, academic_year, amount,
-            payment_method, transaction_id
+            student_id,
+            academic_year,
+            amount,
+            payment_method,
+            transaction_id
         ))
 
         connection.execute("""
@@ -1203,6 +1198,7 @@ def make_fee_payment():
     except sqlite3.Error:
         connection.rollback()
         app.logger.exception("Fee payment error")
+
         return jsonify({
             "success": False,
             "message": "Could not save the payment."
@@ -1225,8 +1221,8 @@ def manage_fees():
     try:
         if request.method == "POST":
             data = read_json()
-            student_id = str(data.get("student_id", "")).strip()
 
+            student_id = str(data.get("student_id", "")).strip()
             academic_year = valid_year(data.get("academic_year"))
 
             if not student_id:
@@ -1236,6 +1232,7 @@ def manage_fees():
                 }), 400
 
             student = get_student(connection, student_id)
+
             if not student:
                 return student_not_found()
 
@@ -1288,7 +1285,6 @@ def manage_fees():
                 )
             }), 200
 
-        # Four rows per student, one for each academic year.
         students = connection.execute("""
             SELECT student_id, name, department, year
             FROM students
@@ -1326,6 +1322,7 @@ def manage_fees():
     except sqlite3.Error:
         connection.rollback()
         app.logger.exception("Admin fee management error")
+
         return jsonify({
             "success": False,
             "message": "Could not load or update fee records."
@@ -1349,7 +1346,8 @@ def admin_dashboard():
         students = connection.execute("""
             SELECT student_id, name, email, department, year,
                    academic_year, room_number, phone
-            FROM students ORDER BY id DESC
+            FROM students
+            ORDER BY id DESC
         """).fetchall()
 
         outpasses = connection.execute(
