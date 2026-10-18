@@ -1,268 +1,175 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Attendance | NGI Hostel Management System</title>
-    <style>
-        * { box-sizing: border-box; }
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background: #f3f5fa;
-            color: #252747;
-        }
-        header {
-            background: #252747;
-            color: white;
-            padding: 18px 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-        header h1 { font-size: 21px; margin: 0; }
-        header a { color: white; text-decoration: none; }
-        main { max-width: 1000px; margin: 30px auto; padding: 0 16px; }
-        .panel {
-            background: white;
-            padding: 24px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            box-shadow: 0 3px 12px #0000000d;
-        }
-        .student-info { color: #666; }
-        label { display: block; margin: 15px 0 7px; font-weight: bold; }
-        input[type="date"] {
-            width: 100%;
-            max-width: 320px;
-            padding: 11px;
-            border: 1px solid #ccd1df;
-            border-radius: 6px;
-            font-size: 16px;
-        }
-        .choice {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin: 18px 0;
-        }
-        button {
-            background: #4548a8;
-            color: white;
-            border: none;
-            padding: 11px 18px;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-        button:disabled { opacity: .6; cursor: not-allowed; }
-        .record {
-            padding: 16px;
-            margin: 12px 0;
-            border: 1px solid #e4e6ef;
-            border-radius: 8px;
-        }
-        .record p { margin: 7px 0; }
-        .status {
-            display: inline-block;
-            padding: 5px 10px;
-            border-radius: 5px;
-            background: #e8f5e9;
-            color: #207245;
-            font-weight: bold;
-        }
-        .message { padding: 12px 0; color: #666; overflow-wrap: anywhere; }
-        footer { text-align: center; padding: 25px; color: #777; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Attendance | NGI Hostel Management System</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f3f5fa;color:#252747}
+header{background:#252747;color:white;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+header h1{font-size:21px;margin:0}
+header a{color:white;text-decoration:none}
+main{max-width:1000px;margin:30px auto;padding:0 16px}
+.panel{background:white;padding:24px;border-radius:12px;margin-bottom:20px;box-shadow:0 3px 12px #0000000d}
+.student-info{color:#666}
+label{display:block;margin:15px 0 7px;font-weight:bold}
+input[type=date]{width:100%;max-width:320px;padding:11px;border:1px solid #ccd1df;border-radius:6px;font-size:16px}
+button{background:#4548a8;color:white;border:none;padding:11px 18px;border-radius:6px;cursor:pointer;margin:8px 5px 8px 0}
+.record{padding:16px;margin:12px 0;border:1px solid #e4e6ef;border-radius:8px}
+.record p{margin:7px 0}
+.status{display:inline-block;padding:5px 10px;border-radius:5px;background:#e8f5e9;color:#207245;font-weight:bold}
+.message{padding:12px 0;color:#666;overflow-wrap:anywhere}
+footer{text-align:center;padding:25px;color:#777}
+</style>
 </head>
 <body>
 <header>
-    <h1>NGI Hostel Management System</h1>
-    <a href="dashboard.html">Back to Dashboard</a>
+<h1>NGI Hostel Management System</h1>
+<a href="dashboard.html">Back to Dashboard</a>
 </header>
 
 <main>
-    <section class="panel">
-        <h2>My Attendance</h2>
-        <p id="studentInfo" class="student-info"></p>
+<section class="panel">
+<h2>My Attendance</h2>
+<p id="studentInfo" class="student-info"></p>
 
-        <form id="attendanceForm">
-            <label for="attendanceDate">Select Date</label>
-            <input type="date" id="attendanceDate" required>
+<form id="attendanceForm">
+<label for="attendanceDate">Select Attendance Date</label>
+<input type="date" id="attendanceDate" required>
+<br>
+<button type="submit" id="submitButton">Submit</button>
+</form>
 
-            <div class="choice">
-                <input type="checkbox" id="present" required>
-                <label for="present" style="margin:0;">Present</label>
-            </div>
+<p id="submitMessage" class="message" role="status"></p>
 
-            <button type="submit" id="submitButton">Submit Attendance</button>
-        </form>
-
-        <p id="submitMessage" class="message" role="status"></p>
-
-        <hr>
-        <h3>Attendance History</h3>
-        <button type="button" id="refreshButton">Refresh Attendance</button>
-        <div id="attendanceRecords" class="message">Loading attendance...</div>
-    </section>
+<hr>
+<h3>Attendance Records</h3>
+<button type="button" id="refreshButton">Refresh Attendance</button>
+<div id="attendanceRecords" class="message">Loading attendance...</div>
+</section>
 </main>
 
 <footer>Nehru Group of Institutions · Hostel Management System</footer>
 
 <script>
-const API_BASE = "https://hostel-management-system-api-426c.onrender.com";
+const API_BASE="https://hostel-management-system-api-426c.onrender.com";
+const studentInfo=document.getElementById("studentInfo");
+const recordsContainer=document.getElementById("attendanceRecords");
+const submitMessage=document.getElementById("submitMessage");
+const form=document.getElementById("attendanceForm");
+const submitButton=document.getElementById("submitButton");
+const dateInput=document.getElementById("attendanceDate");
 
-const studentInfo = document.getElementById("studentInfo");
-const recordsContainer = document.getElementById("attendanceRecords");
-const submitMessage = document.getElementById("submitMessage");
-const form = document.getElementById("attendanceForm");
-const submitButton = document.getElementById("submitButton");
-const dateInput = document.getElementById("attendanceDate");
-const presentCheckbox = document.getElementById("present");
-
-function getLoggedInStudent() {
-    const saved =
-        sessionStorage.getItem("loggedInStudent") ||
-        sessionStorage.getItem("loggedInUser") ||
+function getStudent(){
+    const saved=sessionStorage.getItem("loggedInStudent")||
+        sessionStorage.getItem("loggedInUser")||
         localStorage.getItem("currentUser");
-
-    if (!saved) return null;
-
-    try {
-        return JSON.parse(saved);
-    } catch {
-        return null;
-    }
+    if(!saved)return null;
+    try{return JSON.parse(saved)}catch{return null}
 }
 
-function showStudent() {
-    const student = getLoggedInStudent();
+function getToday(){
+    const d=new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
 
-    if (!student || !student.student_id) {
-        studentInfo.textContent = "Please log in again to mark attendance.";
-        form.hidden = true;
+dateInput.max=getToday();
+dateInput.value=getToday();
+
+function showStudent(){
+    const student=getStudent();
+    if(!student||!student.student_id){
+        studentInfo.textContent="Please log in again to view attendance.";
+        form.hidden=true;
         return null;
     }
-
-    studentInfo.textContent =
-        "Student: " + (student.name || student.username || "Student") +
-        " | Student ID: " + student.student_id;
-
+    studentInfo.textContent="Student: "+(student.name||student.username||"Student")+
+        " | Student ID: "+student.student_id;
     return student;
 }
 
-function localToday() {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-}
-
-dateInput.value = localToday();
-dateInput.max = localToday();
-
-form.addEventListener("submit", async function(event) {
+form.addEventListener("submit",async function(event){
     event.preventDefault();
+    const student=showStudent();
+    if(!student)return;
 
-    const student = showStudent();
-    if (!student) return;
+    submitButton.disabled=true;
+    submitMessage.textContent="Submitting...";
 
-    if (!dateInput.value) {
-        submitMessage.textContent = "Please select a date.";
-        return;
-    }
-
-    if (!presentCheckbox.checked) {
-        submitMessage.textContent = "Please select Present before submitting.";
-        return;
-    }
-
-    submitButton.disabled = true;
-    submitMessage.textContent = "Submitting attendance...";
-
-    try {
-        const response = await fetch(API_BASE + "/api/attendance", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                student_id: student.student_id,
-                attendance_date: dateInput.value,
-                status: "Present"
+    try{
+        const response=await fetch(API_BASE+"/api/attendance",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({
+                student_id:student.student_id,
+                attendance_date:dateInput.value,
+                status:"Present"
             })
         });
 
-        const data = await response.json().catch(() => ({}));
-
-        if (!response.ok || data.success !== true) {
-            throw new Error(data.message || `Request failed (${response.status}).`);
+        const data=await response.json().catch(()=>({}));
+        if(!response.ok||data.success!==true){
+            throw new Error(data.message||"Request failed ("+response.status+").");
         }
 
-        submitMessage.textContent = "Attendance submitted successfully.";
-        presentCheckbox.checked = false;
+        submitMessage.textContent="Attendance submitted successfully.";
         await loadAttendance();
-
-    } catch (error) {
-        console.error("Attendance submission error:", error);
-        submitMessage.textContent =
-            "Could not save attendance: " + error.message;
-    } finally {
-        submitButton.disabled = false;
+    }catch(error){
+        console.error(error);
+        submitMessage.textContent="Attendance could not be submitted: "+error.message;
+    }finally{
+        submitButton.disabled=false;
     }
 });
 
-async function loadAttendance() {
-    const student = showStudent();
-
-    if (!student) {
-        recordsContainer.textContent = "Please log in again.";
+async function loadAttendance(){
+    const student=showStudent();
+    if(!student){
+        recordsContainer.textContent="Please log in again.";
         return;
     }
 
-    recordsContainer.textContent = "Loading attendance...";
+    recordsContainer.textContent="Loading attendance...";
 
-    try {
-        const response = await fetch(
-            API_BASE + "/api/attendance?student_id=" +
-            encodeURIComponent(student.student_id)
-        );
+    try{
+        const response=await fetch(API_BASE+"/api/attendance?student_id="+
+            encodeURIComponent(student.student_id));
+        const data=await response.json().catch(()=>({}));
 
-        const data = await response.json().catch(() => ({}));
-
-        if (!response.ok || data.success !== true) {
-            throw new Error(data.message || `Request failed (${response.status}).`);
+        if(!response.ok||data.success!==true){
+            throw new Error(data.message||"Request failed ("+response.status+").");
         }
 
         recordsContainer.replaceChildren();
-        const records = data.attendance || [];
+        const records=data.attendance||[];
 
-        if (records.length === 0) {
-            recordsContainer.textContent = "No attendance records found yet.";
+        if(records.length===0){
+            recordsContainer.textContent="No attendance records found.";
             return;
         }
 
-        records.forEach(record => {
-            const card = document.createElement("div");
-            card.className = "record";
+        records.forEach(record=>{
+            const card=document.createElement("div");
+            card.className="record";
 
-            const date = document.createElement("p");
-            date.textContent = "Date: " + record.attendance_date;
+            const date=document.createElement("p");
+            date.textContent="Date: "+record.attendance_date;
 
-            const status = document.createElement("span");
-            status.className = "status";
-            status.textContent = record.status;
+            const status=document.createElement("span");
+            status.className="status";
+            status.textContent=record.status;
 
-            card.appendChild(date);
-            card.appendChild(status);
+            card.append(date,status);
             recordsContainer.appendChild(card);
         });
-
-    } catch (error) {
-        console.error("Attendance loading error:", error);
-        recordsContainer.textContent =
-            "Could not load attendance: " + error.message;
+    }catch(error){
+        console.error(error);
+        recordsContainer.textContent="Could not load attendance: "+error.message;
     }
 }
 
-document.getElementById("refreshButton").addEventListener("click", loadAttendance);
+document.getElementById("refreshButton").addEventListener("click",loadAttendance);
 showStudent();
 loadAttendance();
 </script>
