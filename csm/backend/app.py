@@ -106,7 +106,10 @@ def initialize_database():
 # ==================== RESPONSES ====================
 
 def error(message, status=400):
-    return jsonify({"success": False, "message": message}), status
+    return jsonify({
+        "success": False,
+        "message": message
+    }), status
 
 
 def student_exists(db, student_id):
@@ -167,7 +170,10 @@ def home():
 
 @app.route("/api/health", methods=["GET"])
 def health():
-    return jsonify({"success": True, "status": "healthy"})
+    return jsonify({
+        "success": True,
+        "status": "healthy"
+    })
 
 
 # ==================== STUDENT REGISTRATION ====================
@@ -190,34 +196,66 @@ def register():
     if len(password) < 6:
         return error("Password must contain at least 6 characters")
 
-    department = data.get("department", "")
-    dob = data.get("dob", "")
-    phone = data.get("phone", "")
-    room_number = data.get(
-        "room_number",
-        data.get("roomNumber", "")
-    )
+    department = str(data.get("department", "")).strip()
+    dob = str(data.get("dob", "")).strip()
+    phone = str(data.get("phone", "")).strip()
 
-    try:
-        year = int(data.get("year", 1))
-    except (TypeError, ValueError):
-        return error("Invalid academic year")
+    room_number = str(
+        data.get("room_number", data.get("roomNumber", ""))
+    ).strip()
+
+    # FIX: Accept year values sent by register.html:
+    # "1st Year", "2nd Year", "3rd Year", "4th Year"
+    # Also accept numeric values such as 1, 2, 3, 4.
+
+    year_value = str(data.get("year", "1")).strip()
+
+    year_mapping = {
+        "1st Year": 1,
+        "2nd Year": 2,
+        "3rd Year": 3,
+        "4th Year": 4
+    }
+
+    if year_value in year_mapping:
+        year = year_mapping[year_value]
+    else:
+        try:
+            year = int(year_value)
+        except (TypeError, ValueError):
+            return error("Invalid academic year")
 
     if year not in (1, 2, 3, 4):
         return error("Year must be between 1 and 4")
 
-    academic_year = data.get(
-        "academic_year",
-        data.get("academicYear", str(year))
-    )
+    # Academic batch, for example 2025-2028, is stored separately.
+    academic_year = str(
+        data.get(
+            "academic_year",
+            data.get("academicYear", str(year))
+        )
+    ).strip()
+
+    if not academic_year:
+        return error("Please select an academic year")
 
     db = get_db()
 
     try:
         cursor = db.execute("""
             INSERT INTO students
-            (name, email, username, password, dob, department,
-             year, academic_year, room_number, phone)
+            (
+                name,
+                email,
+                username,
+                password,
+                dob,
+                department,
+                year,
+                academic_year,
+                room_number,
+                phone
+            )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             name,
@@ -232,6 +270,7 @@ def register():
             phone
         ))
 
+        # Preserve the existing automatic student ID generation.
         student_id = "STU{:03d}".format(cursor.lastrowid)
 
         db.execute(
@@ -249,7 +288,15 @@ def register():
 
     except sqlite3.IntegrityError:
         db.rollback()
-        return error("Email or username already registered", 409)
+        return error(
+            "Email or username already registered",
+            409
+        )
+
+    except sqlite3.Error:
+        db.rollback()
+        app.logger.exception("Student registration failed")
+        return error("Unable to complete registration", 500)
 
     finally:
         db.close()
@@ -275,14 +322,20 @@ def login():
 
     db = get_db()
 
-    student = db.execute("""
-        SELECT * FROM students
-        WHERE lower(username) = ?
-           OR lower(email) = ?
-           OR lower(student_id) = ?
-    """, (identity, identity, identity)).fetchone()
-
-    db.close()
+    try:
+        student = db.execute("""
+            SELECT *
+            FROM students
+            WHERE lower(username) = ?
+               OR lower(email) = ?
+               OR lower(student_id) = ?
+        """, (
+            identity,
+            identity,
+            identity
+        )).fetchone()
+    finally:
+        db.close()
 
     if not student or not check_password_hash(
         student["password"], password
@@ -318,8 +371,10 @@ def admin_login():
     username = os.environ.get("ADMIN_USERNAME")
     password = os.environ.get("ADMIN_PASSWORD")
 
-    if not username or not password or not os.environ.get(
-        "ADMIN_TOKEN_SECRET"
+    if (
+        not username
+        or not password
+        or not os.environ.get("ADMIN_TOKEN_SECRET")
     ):
         return error("Admin credentials are not configured", 503)
 
@@ -348,14 +403,22 @@ def admin_login():
 def admin_students():
     db = get_db()
 
-    rows = db.execute("""
-        SELECT student_id, name, email, department, year,
-               academic_year, room_number, phone
-        FROM students
-        ORDER BY id DESC
-    """).fetchall()
-
-    db.close()
+    try:
+        rows = db.execute("""
+            SELECT
+                student_id,
+                name,
+                email,
+                department,
+                year,
+                academic_year,
+                room_number,
+                phone
+            FROM students
+            ORDER BY id DESC
+        """).fetchall()
+    finally:
+        db.close()
 
     return jsonify({
         "success": True,
@@ -392,7 +455,12 @@ def outpasses():
             INSERT INTO outpasses
             (student_id, reason, destination, date)
             VALUES (?, ?, ?, ?)
-        """, (student_id, reason, destination, date))
+        """, (
+            student_id,
+            reason,
+            destination,
+            date
+        ))
 
         db.commit()
         db.close()
@@ -405,14 +473,18 @@ def outpasses():
     student_id = request.args.get("student_id")
 
     if student_id:
-        rows = db.execute(
-            "SELECT * FROM outpasses WHERE student_id = ? ORDER BY id DESC",
-            (student_id,)
-        ).fetchall()
+        rows = db.execute("""
+            SELECT *
+            FROM outpasses
+            WHERE student_id = ?
+            ORDER BY id DESC
+        """, (student_id,)).fetchall()
     else:
-        rows = db.execute(
-            "SELECT * FROM outpasses ORDER BY id DESC"
-        ).fetchall()
+        rows = db.execute("""
+            SELECT *
+            FROM outpasses
+            ORDER BY id DESC
+        """).fetchall()
 
     db.close()
 
@@ -426,12 +498,14 @@ def outpasses():
 @admin_required
 def admin_get_outpasses():
     db = get_db()
+
     rows = db.execute("""
         SELECT o.*, s.name
         FROM outpasses o
         LEFT JOIN students s ON s.student_id = o.student_id
         ORDER BY o.id DESC
     """).fetchall()
+
     db.close()
 
     return jsonify({
@@ -456,17 +530,22 @@ def admin_update_outpass(outpass_id):
         return error("Invalid outpass status")
 
     db = get_db()
+
     cursor = db.execute(
         "UPDATE outpasses SET status = ? WHERE id = ?",
         (status, outpass_id)
     )
+
     db.commit()
     db.close()
 
     if cursor.rowcount == 0:
         return error("Outpass not found", 404)
 
-    return jsonify({"success": True, "message": "Outpass updated"})
+    return jsonify({
+        "success": True,
+        "message": "Outpass updated"
+    })
 
 
 # ==================== COMPLAINTS ====================
@@ -499,7 +578,11 @@ def complaints():
         db.execute("""
             INSERT INTO complaints (student_id, category, complaint)
             VALUES (?, ?, ?)
-        """, (student_id, category, complaint))
+        """, (
+            student_id,
+            category,
+            complaint
+        ))
 
         db.commit()
         db.close()
@@ -512,14 +595,18 @@ def complaints():
     student_id = request.args.get("student_id")
 
     if student_id:
-        rows = db.execute(
-            "SELECT * FROM complaints WHERE student_id = ? ORDER BY id DESC",
-            (student_id,)
-        ).fetchall()
+        rows = db.execute("""
+            SELECT *
+            FROM complaints
+            WHERE student_id = ?
+            ORDER BY id DESC
+        """, (student_id,)).fetchall()
     else:
-        rows = db.execute(
-            "SELECT * FROM complaints ORDER BY id DESC"
-        ).fetchall()
+        rows = db.execute("""
+            SELECT *
+            FROM complaints
+            ORDER BY id DESC
+        """).fetchall()
 
     db.close()
 
@@ -561,7 +648,12 @@ def admin_update_complaint(complaint_id):
     data = request.get_json(silent=True) or {}
     status = data.get("status")
 
-    if status not in ("Pending", "In Progress", "Resolved", "Rejected"):
+    if status not in (
+        "Pending",
+        "In Progress",
+        "Resolved",
+        "Rejected"
+    ):
         return error("Invalid complaint status")
 
     db = get_db()
@@ -577,7 +669,10 @@ def admin_update_complaint(complaint_id):
     if cursor.rowcount == 0:
         return error("Complaint not found", 404)
 
-    return jsonify({"success": True, "message": "Complaint updated"})
+    return jsonify({
+        "success": True,
+        "message": "Complaint updated"
+    })
 
 
 # ==================== ATTENDANCE ====================
@@ -595,7 +690,8 @@ def attendance():
     db = get_db()
 
     rows = db.execute("""
-        SELECT * FROM attendance
+        SELECT *
+        FROM attendance
         WHERE student_id = ?
         ORDER BY date DESC
     """, (student_id,)).fetchall()
@@ -604,6 +700,7 @@ def attendance():
 
     records = [dict(row) for row in rows]
     total = len(records)
+
     present = sum(
         1 for row in records
         if str(row["status"]).lower() == "present"
@@ -614,11 +711,16 @@ def attendance():
         "attendance": records,
         "total": total,
         "present": present,
-        "percentage": round(present * 100 / total, 2) if total else 0
+        "percentage": round(
+            present * 100 / total, 2
+        ) if total else 0
     })
 
 
-@app.route("/api/admin/attendance", methods=["GET", "POST", "OPTIONS"])
+@app.route(
+    "/api/admin/attendance",
+    methods=["GET", "POST", "OPTIONS"]
+)
 @admin_required
 def admin_attendance():
     if request.method == "OPTIONS":
@@ -642,9 +744,13 @@ def admin_attendance():
             return error("Student not found", 404)
 
         existing = db.execute("""
-            SELECT id FROM attendance
+            SELECT id
+            FROM attendance
             WHERE student_id = ? AND date = ?
-        """, (student_id, date)).fetchone()
+        """, (
+            student_id,
+            date
+        )).fetchone()
 
         if existing:
             db.execute(
@@ -655,7 +761,11 @@ def admin_attendance():
             db.execute("""
                 INSERT INTO attendance (student_id, date, status)
                 VALUES (?, ?, ?)
-            """, (student_id, date, status))
+            """, (
+                student_id,
+                date,
+                status
+            ))
 
         db.commit()
         db.close()
@@ -706,7 +816,8 @@ def get_fees():
     ).fetchone()
 
     payments = db.execute("""
-        SELECT * FROM fee_payments
+        SELECT *
+        FROM fee_payments
         WHERE student_id = ?
         ORDER BY id DESC
     """, (student_id,)).fetchall()
@@ -743,6 +854,7 @@ def make_fee_payment():
     data = request.get_json(silent=True) or {}
 
     student_id = str(data.get("student_id", "")).strip()
+
     payment_method = str(
         data.get("payment_method", data.get("method", "UPI"))
     ).strip()
@@ -774,7 +886,10 @@ def make_fee_payment():
 
     if not fee:
         db.close()
-        return error("No fee record configured for this student", 404)
+        return error(
+            "No fee record configured for this student",
+            404
+        )
 
     total = float(fee["total_amount"])
     paid = float(fee["paid_amount"])
@@ -795,7 +910,13 @@ def make_fee_payment():
     try:
         db.execute("""
             INSERT INTO fee_payments
-            (student_id, amount, payment_method, transaction_id, status)
+            (
+                student_id,
+                amount,
+                payment_method,
+                transaction_id,
+                status
+            )
             VALUES (?, ?, ?, ?, 'Success')
         """, (
             student_id,
@@ -809,7 +930,10 @@ def make_fee_payment():
             SET paid_amount = paid_amount + ?,
                 updated_at = CURRENT_TIMESTAMP
             WHERE student_id = ?
-        """, (amount, student_id))
+        """, (
+            amount,
+            student_id
+        ))
 
         db.commit()
 
@@ -818,9 +942,7 @@ def make_fee_payment():
             (student_id,)
         ).fetchone()
 
-        db.close()
-
-        return jsonify({
+        result = {
             "success": True,
             "message": "Simulated payment recorded successfully",
             "transaction_id": transaction_id,
@@ -828,11 +950,14 @@ def make_fee_payment():
             "total_amount": float(updated["total_amount"]),
             "paid_amount": float(updated["paid_amount"]),
             "balance": max(
-                float(updated["total_amount"]) -
-                float(updated["paid_amount"]),
+                float(updated["total_amount"])
+                - float(updated["paid_amount"]),
                 0
             )
-        })
+        }
+
+        db.close()
+        return jsonify(result)
 
     except Exception:
         db.rollback()
@@ -843,7 +968,10 @@ def make_fee_payment():
 
 # ==================== ADMIN FEES ====================
 
-@app.route("/api/admin/fees", methods=["GET", "POST", "OPTIONS"])
+@app.route(
+    "/api/admin/fees",
+    methods=["GET", "POST", "OPTIONS"]
+)
 @admin_required
 def admin_fees():
     if request.method == "OPTIONS":
@@ -864,7 +992,9 @@ def admin_fees():
 
         if not student_id or total < 0:
             db.close()
-            return error("Valid student ID and fee amount are required")
+            return error(
+                "Valid student ID and fee amount are required"
+            )
 
         if not student_exists(db, student_id):
             db.close()
@@ -880,18 +1010,28 @@ def admin_fees():
 
             if total < paid:
                 db.close()
-                return error("Total fee cannot be less than the amount paid")
+                return error(
+                    "Total fee cannot be less than the amount paid"
+                )
 
             db.execute("""
                 UPDATE fees
-                SET total_amount = ?, updated_at = CURRENT_TIMESTAMP
+                SET total_amount = ?,
+                    updated_at = CURRENT_TIMESTAMP
                 WHERE student_id = ?
-            """, (total, student_id))
+            """, (
+                total,
+                student_id
+            ))
         else:
             db.execute("""
-                INSERT INTO fees (student_id, total_amount, paid_amount)
+                INSERT INTO fees
+                (student_id, total_amount, paid_amount)
                 VALUES (?, ?, 0)
-            """, (total, student_id))
+            """, (
+                student_id,
+                total
+            ))
 
         db.commit()
         db.close()
@@ -910,8 +1050,9 @@ def admin_fees():
             COALESCE(f.total_amount, 0) AS total_amount,
             COALESCE(f.paid_amount, 0) AS paid_amount,
             MAX(
-                COALESCE(f.total_amount, 0) -
-                COALESCE(f.paid_amount, 0), 0
+                COALESCE(f.total_amount, 0)
+                - COALESCE(f.paid_amount, 0),
+                0
             ) AS balance
         FROM students s
         LEFT JOIN fees f ON f.student_id = s.student_id
@@ -924,6 +1065,7 @@ def admin_fees():
 
     for row in rows:
         item = dict(row)
+
         if item["total_amount"] > 0 and item["balance"] == 0:
             item["status"] = "Paid"
         elif item["paid_amount"] > 0:
@@ -951,12 +1093,14 @@ def admin_dashboard():
     ).fetchone()["count"]
 
     pending_outpasses = db.execute("""
-        SELECT COUNT(*) AS count FROM outpasses
+        SELECT COUNT(*) AS count
+        FROM outpasses
         WHERE status = 'Pending'
     """).fetchone()["count"]
 
     pending_complaints = db.execute("""
-        SELECT COUNT(*) AS count FROM complaints
+        SELECT COUNT(*) AS count
+        FROM complaints
         WHERE status = 'Pending'
     """).fetchone()["count"]
 
@@ -995,4 +1139,8 @@ initialize_database()
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    app.run(
+        host="0.0.0.0",
+        port=5000,
+        debug=False
+    )
