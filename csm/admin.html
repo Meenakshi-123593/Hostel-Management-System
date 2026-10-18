@@ -41,6 +41,7 @@ input,select{padding:9px;border:1px solid #cbd5e1;border-radius:5px;max-width:15
 #loginPanel button{width:100%;margin-top:10px}
 .hidden{display:none!important}
 .note{font-size:13px;color:#64748b;line-height:1.5}
+
 @media(max-width:700px){
 .layout{display:block}
 .sidebar{width:100%;display:flex;overflow-x:auto;gap:5px;padding:10px}
@@ -50,501 +51,581 @@ header{padding:15px}
 header h1{font-size:19px}
 }
 </style></head><body><header>
-  <div>
-    <h1>NGI Hostel Management System</h1>
-    <div style="font-size:13px;margin-top:5px">Administrator Panel</div>
-  </div>
-  <div>
+    <div>
+        <h1>NGI Hostel Management System</h1>
+        <div style="font-size:13px;margin-top:5px">Administrator Panel</div>
+    </div><div>
     <button onclick="refreshCurrent()">Refresh</button>
     <button class="logout" onclick="logoutAdmin()">Logout</button>
-  </div>
+</div>
+
 </header><div id="loginPanel" class="hidden">
-  <h2>Admin Login</h2>
-  <p class="note">Sign in with your existing administrator credentials.</p>
-  <input id="adminUsername" placeholder="Admin username" autocomplete="username">
-  <input id="adminPassword" type="password" placeholder="Admin password" autocomplete="current-password">
-  <button onclick="adminLogin()">Login</button>
-  <div id="loginMessage"></div>
+    <h2>Admin Login</h2>
+    <p class="note">Sign in with your existing administrator credentials.</p><input id="adminUsername" placeholder="Admin username" autocomplete="username">
+<input id="adminPassword" type="password" placeholder="Admin password" autocomplete="current-password">
+
+<button onclick="adminLogin()">Login</button>
+<div id="loginMessage"></div>
+
 </div><div id="adminApp" class="layout"><nav class="sidebar">
-  <button class="active" data-section="dashboard" onclick="showSection('dashboard',this)">Dashboard</button>
-  <button data-section="students" onclick="showSection('students',this)">Students</button>
-  <button data-section="fees" onclick="showSection('fees',this)">Fee Management</button>
-  <button data-section="outpasses" onclick="showSection('outpasses',this)">Outpasses</button>
-  <button data-section="complaints" onclick="showSection('complaints',this)">Complaints</button>
-  <button data-section="attendance" onclick="showSection('attendance',this)">Attendance</button>
-</nav><main><section id="dashboard" class="section active">
-  <h2>Dashboard Overview</h2>
-  <p>Welcome to the NGI Hostel Administration Panel.</p>
-  <div class="cards">
-    <div class="card"><h3>Registered Students</h3><div class="number" id="studentCount">0</div></div>
-    <div class="card"><h3>Outpasses</h3><div class="number" id="outpassCount">0</div></div>
-    <div class="card"><h3>Complaints</h3><div class="number" id="complaintCount">0</div></div>
-    <div class="card"><h3>Fee Records</h3><div class="number" id="feeCount">0</div></div>
-  </div>
-  <div id="dashboardMessage" class="message hidden"></div>
-  <button onclick="loadDashboard()">Refresh Dashboard</button>
-</section><section id="students" class="section">
-  <h2>Registered Students</h2>
-  <div class="top-actions">
-    <input id="studentSearch" placeholder="Search student ID or name" oninput="renderStudents()">
-    <button onclick="loadStudents()">Refresh Students</button>
-  </div>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Student ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Academic Year</th></tr></thead>
-      <tbody id="studentsTableBody"><tr><td colspan="5">Load student records.</td></tr></tbody>
-    </table>
-  </div>
-  <div id="studentsMessage"></div>
-</section><section id="fees" class="section">
-  <h2>Fee Management</h2>
-  <div class="cards">
-    <div class="card"><h3>Total Fees</h3><div class="number" id="feesTotal">₹0</div></div>
-    <div class="card"><h3>Total Paid</h3><div class="number" id="feesPaid">₹0</div></div>
-    <div class="card"><h3>Outstanding Balance</h3><div class="number" id="feesBalance">₹0</div></div>
-  </div>  <div class="card">
-    <h3>Update Academic-Year Fees</h3>
-    <p class="note">Set the total fee for a student's selected academic year. The paid amount is controlled by recorded payments and cannot be edited here.</p>
-    <div class="top-actions">
-      <input id="feeStudentId" placeholder="Student ID">
-      <select id="feeAcademicYear">
-        <option value="1">1st Year</option>
-        <option value="2">2nd Year</option>
-        <option value="3">3rd Year</option>
-        <option value="4">4th Year</option>
-      </select>
-      <input id="feeTotalAmount" type="number" min="0" step="0.01" placeholder="Total fee ₹">
-      <button onclick="saveFees()">Save Fee</button>
-    </div>
-    <div id="feeMessage"></div>
-  </div>  <div class="top-actions">
-    <input id="feeSearch" placeholder="Search student ID or name" oninput="renderFees()">
-    <button onclick="loadFees()">Refresh Fee Records</button>
-  </div>  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>Student ID</th>
-          <th>Name</th>
-          <th>Academic Year</th>
-          <th>Total Fee</th>
-          <th>Paid</th>
-          <th>Balance</th>
-          <th>Status</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody id="feesTableBody"><tr><td colspan="8">Load fee records.</td></tr></tbody>
-    </table>
-  </div>
-</section><section id="outpasses" class="section">
-  <h2>Outpass Management</h2>
-  <div class="top-actions"><button onclick="loadOutpasses()">Refresh Outpasses</button></div>
-  <div id="outpassMessage"></div>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>ID</th><th>Student ID</th><th>Reason</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>
-      <tbody id="outpassesTableBody"><tr><td colspan="6">Load outpasses.</td></tr></tbody>
-    </table>
-  </div>
-</section><section id="complaints" class="section">
-  <h2>Complaint Management</h2>
-  <div class="top-actions"><button onclick="loadComplaints()">Refresh Complaints</button></div>
-  <div id="complaintMessage"></div>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>ID</th><th>Student ID</th><th>Complaint</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>
-      <tbody id="complaintsTableBody"><tr><td colspan="6">Load complaints.</td></tr></tbody>
-    </table>
-  </div>
-</section><section id="attendance" class="section">
-  <h2>Attendance Records</h2>
-  <div class="top-actions">
-    <input id="attendanceDate" type="date">
-    <button onclick="loadAttendance()">Load Attendance</button>
-  </div>
-  <div id="attendanceMessage"></div>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Student ID</th><th>Name</th><th>Date</th><th>Status</th></tr></thead>
-      <tbody id="attendanceTableBody"><tr><td colspan="4">Choose a date and load attendance.</td></tr></tbody>
-    </table>
-  </div>
-</section></main>
+    <button class="active" data-section="dashboard" onclick="showSection('dashboard',this)">Dashboard</button>
+    <button data-section="students" onclick="showSection('students',this)">Students</button>
+    <button data-section="outpasses" onclick="showSection('outpasses',this)">Outpasses</button>
+    <button data-section="complaints" onclick="showSection('complaints',this)">Complaints</button>
+    <button data-section="attendance" onclick="showSection('attendance',this)">Attendance</button>
+</nav>
+
+<main>
+
+    <!-- DASHBOARD -->
+    <section id="dashboard" class="section active">
+        <h2>Dashboard Overview</h2>
+        <p>Welcome to the NGI Hostel Administration Panel.</p>
+
+        <div class="cards">
+            <div class="card">
+                <h3>Registered Students</h3>
+                <div class="number" id="studentCount">0</div>
+            </div>
+
+            <div class="card">
+                <h3>Outpasses</h3>
+                <div class="number" id="outpassCount">0</div>
+            </div>
+
+            <div class="card">
+                <h3>Complaints</h3>
+                <div class="number" id="complaintCount">0</div>
+            </div>
+        </div>
+
+        <div id="dashboardMessage" class="message hidden"></div>
+        <button onclick="loadDashboard()">Refresh Dashboard</button>
+    </section>
+
+    <!-- STUDENTS -->
+    <section id="students" class="section">
+        <h2>Registered Students</h2>
+
+        <div class="top-actions">
+            <input id="studentSearch" placeholder="Search student ID or name" oninput="renderStudents()">
+            <button onclick="loadStudents()">Refresh Students</button>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Student ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Academic Year</th>
+                    </tr>
+                </thead>
+                <tbody id="studentsTableBody">
+                    <tr><td colspan="5">Load student records.</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="studentsMessage"></div>
+    </section>
+
+    <!-- OUTPASSES -->
+    <section id="outpasses" class="section">
+        <h2>Outpass Management</h2>
+
+        <div class="top-actions">
+            <button onclick="loadOutpasses()">Refresh Outpasses</button>
+        </div>
+
+        <div id="outpassMessage"></div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Student ID</th>
+                        <th>Reason</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="outpassesTableBody">
+                    <tr><td colspan="6">Load outpasses.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- COMPLAINTS -->
+    <section id="complaints" class="section">
+        <h2>Complaint Management</h2>
+
+        <div class="top-actions">
+            <button onclick="loadComplaints()">Refresh Complaints</button>
+        </div>
+
+        <div id="complaintMessage"></div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Student ID</th>
+                        <th>Complaint</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="complaintsTableBody">
+                    <tr><td colspan="6">Load complaints.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- ATTENDANCE -->
+    <section id="attendance" class="section">
+        <h2>Attendance Records</h2>
+
+        <div class="top-actions">
+            <input id="attendanceDate" type="date">
+            <button onclick="loadAttendance()">Load Attendance</button>
+        </div>
+
+        <div id="attendanceMessage"></div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Student ID</th>
+                        <th>Name</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="attendanceTableBody">
+                    <tr><td colspan="4">Choose a date and load attendance.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</main>
+
 </div><script>
-const API_BASE="https://hostel-management-system-api-426c.onrender.com";
+const API_BASE = "https://hostel-management-system-api-426c.onrender.com";
 
-let studentsData=[];
-let feesData=[];
-let outpassesData=[];
-let complaintsData=[];
-let attendanceData=[];
+let studentsData = [];
+let outpassesData = [];
+let complaintsData = [];
+let attendanceData = [];
 
-function getToken(){
-  const keys=["adminToken","admin_token","admin_token_key","token","authToken"];
-  for(const storage of [sessionStorage,localStorage]){
-    for(const key of keys){
-      const value=storage.getItem(key);
-      if(value && value!=="null" && value!=="undefined") return value;
+function getToken() {
+    const keys = ["adminToken", "admin_token", "admin_token_key", "token", "authToken"];
+
+    for (const storage of [sessionStorage, localStorage]) {
+        for (const key of keys) {
+            const value = storage.getItem(key);
+
+            if (value && value !== "null" && value !== "undefined") {
+                return value;
+            }
+        }
     }
-  }
-  return "";
+
+    return "";
 }
 
-function setToken(token){
-  localStorage.setItem("adminToken",token);
-  sessionStorage.setItem("adminToken",token);
+function setToken(token) {
+    localStorage.setItem("adminToken", token);
+    sessionStorage.setItem("adminToken", token);
 }
 
-function clearToken(){
-  for(const storage of [sessionStorage,localStorage]){
-    ["adminToken","admin_token","admin_token_key","token","authToken"].forEach(k=>storage.removeItem(k));
-  }
+function clearToken() {
+    for (const storage of [sessionStorage, localStorage]) {
+        ["adminToken", "admin_token", "admin_token_key", "token", "authToken"]
+            .forEach(key => storage.removeItem(key));
+    }
 }
 
-function showMessage(id,message,type=""){
-  const element=document.getElementById(id);
-  if(!element)return;
-  element.textContent=message;
-  element.className=type==="error"?"message error":type==="success"?"message success":"message";
-  element.classList.toggle("hidden",!message);
+function showMessage(id, message, type = "") {
+    const element = document.getElementById(id);
+    if (!element) return;
+
+    element.textContent = message;
+    element.className =
+        type === "error" ? "message error" :
+        type === "success" ? "message success" : "message";
+
+    element.classList.toggle("hidden", !message);
 }
 
-function escapeHTML(value){
-  return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function escapeHTML(value) {
+    return String(value ?? "").replace(/[&<>"']/g, c => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    }[c]));
 }
 
-function money(value){
-  return "₹"+Number(value||0).toLocaleString("en-IN",{maximumFractionDigits:2});
+function getArray(data, key) {
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data[key])) return data[key];
+    return [];
 }
 
-function yearLabel(value){
-  return ({"1":"1st Year","2":"2nd Year","3":"3rd Year","4":"4th Year"})[String(value)]||"Year "+value;
-}
+async function api(path, options = {}) {
+    const headers = { ...(options.headers || {}) };
+    const token = getToken();
 
-function getArray(data,key){
-  if(Array.isArray(data))return data;
-  if(data && Array.isArray(data[key]))return data[key];
-  return [];
-}
+    if (token) headers.Authorization = "Bearer " + token;
 
-async function api(path,options={}){
-  const headers={...(options.headers||{})};
-  const token=getToken();
-  if(token)headers.Authorization="Bearer "+token;
-  if(options.body && !headers["Content-Type"])headers["Content-Type"]="application/json";
+    if (options.body && !headers["Content-Type"]) {
+        headers["Content-Type"] = "application/json";
+    }
 
-  const response=await fetch(API_BASE+path,{...options,headers});
-  let data={};
-  try{data=await response.json()}catch(e){}
-  if(!response.ok || data.success===false){
-    throw new Error(data.message||data.error||("Request failed: "+response.status));
-  }
-  return data;
-}
-
-function showSection(id,button){
-  document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
-  document.querySelectorAll(".sidebar button").forEach(b=>b.classList.remove("active"));
-  if(button)button.classList.add("active");
-
-  if(id==="dashboard")loadDashboard();
-  if(id==="students")loadStudents();
-  if(id==="fees")loadFees();
-  if(id==="outpasses")loadOutpasses();
-  if(id==="complaints")loadComplaints();
-  if(id==="attendance")loadAttendance();
-}
-
-async function adminLogin(){
-  const username=document.getElementById("adminUsername").value.trim();
-  const password=document.getElementById("adminPassword").value;
-  const message=document.getElementById("loginMessage");
-  message.textContent="";
-
-  if(!username||!password){
-    message.textContent="Enter both username and password.";
-    return;
-  }
-
-  try{
-    const data=await api("/api/admin/login",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({username,password})
+    const response = await fetch(API_BASE + path, {
+        ...options,
+        headers
     });
 
-    const token=data.token||data.access_token||data.admin_token;
-    if(!token)throw new Error("Login response did not contain an authentication token.");
-    setToken(token);
+    let data = {};
+
+    try {
+        data = await response.json();
+    } catch (error) {}
+
+    if (!response.ok || data.success === false) {
+        throw new Error(
+            data.message || data.error || ("Request failed: " + response.status)
+        );
+    }
+
+    return data;
+}
+
+function showSection(id, button) {
+    document.querySelectorAll(".section").forEach(section => {
+        section.classList.remove("active");
+    });
+
+    document.getElementById(id).classList.add("active");
+
+    document.querySelectorAll(".sidebar button").forEach(btn => {
+        btn.classList.remove("active");
+    });
+
+    if (button) button.classList.add("active");
+
+    if (id === "dashboard") loadDashboard();
+    if (id === "students") loadStudents();
+    if (id === "outpasses") loadOutpasses();
+    if (id === "complaints") loadComplaints();
+    if (id === "attendance") loadAttendance();
+}
+
+async function adminLogin() {
+    const username = document.getElementById("adminUsername").value.trim();
+    const password = document.getElementById("adminPassword").value;
+    const message = document.getElementById("loginMessage");
+
+    message.textContent = "";
+
+    if (!username || !password) {
+        message.textContent = "Enter both username and password.";
+        return;
+    }
+
+    try {
+        const data = await api("/api/admin/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password })
+        });
+
+        const token = data.token || data.access_token || data.admin_token;
+
+        if (!token) {
+            throw new Error("Login response did not contain an authentication token.");
+        }
+
+        setToken(token);
+
+        document.getElementById("loginPanel").classList.add("hidden");
+        document.getElementById("adminApp").classList.remove("hidden");
+
+        await loadDashboard();
+
+    } catch (error) {
+        message.textContent = error.message;
+    }
+}
+
+function logoutAdmin() {
+    clearToken();
+
+    document.getElementById("adminApp").classList.add("hidden");
+    document.getElementById("loginPanel").classList.remove("hidden");
+}
+
+async function loadDashboard() {
+    try {
+        const data = await api("/api/admin/dashboard");
+
+        const students = getArray(data, "students");
+        const outpasses = getArray(data, "outpasses");
+        const complaints = getArray(data, "complaints");
+
+        document.getElementById("studentCount").textContent =
+            data.student_count ?? students.length;
+
+        document.getElementById("outpassCount").textContent =
+            data.outpass_count ?? outpasses.length;
+
+        document.getElementById("complaintCount").textContent =
+            data.complaint_count ?? complaints.length;
+
+        showMessage("dashboardMessage", "Dashboard updated.", "success");
+
+    } catch (error) {
+        showMessage("dashboardMessage", error.message, "error");
+    }
+}
+
+async function loadStudents() {
+    const body = document.getElementById("studentsTableBody");
+    body.innerHTML = '<tr><td colspan="5">Loading students...</td></tr>';
+
+    try {
+        const data = await api("/api/admin/students");
+        studentsData = getArray(data, "students");
+        renderStudents();
+
+        showMessage("studentsMessage", "", "");
+
+    } catch (error) {
+        body.innerHTML =
+            `<tr><td colspan="5">${escapeHTML(error.message)}</td></tr>`;
+
+        showMessage("studentsMessage", error.message, "error");
+    }
+}
+
+function renderStudents() {
+    const query = (
+        document.getElementById("studentSearch").value || ""
+    ).toLowerCase();
+
+    const filtered = studentsData.filter(student =>
+        String(student.student_id || student.id || "").toLowerCase().includes(query) ||
+        String(student.name || student.full_name || "").toLowerCase().includes(query)
+    );
+
+    document.getElementById("studentsTableBody").innerHTML = filtered.length
+        ? filtered.map(student => `
+            <tr>
+                <td>${escapeHTML(student.student_id || student.id || "-")}</td>
+                <td>${escapeHTML(student.name || student.full_name || "-")}</td>
+                <td>${escapeHTML(student.email || "-")}</td>
+                <td>${escapeHTML(student.phone || student.mobile || "-")}</td>
+                <td>${escapeHTML(student.academic_year || student.year || "-")}</td>
+            </tr>
+        `).join("")
+        : '<tr><td colspan="5">No matching students found.</td></tr>';
+}
+
+async function loadOutpasses() {
+    const body = document.getElementById("outpassesTableBody");
+    body.innerHTML = '<tr><td colspan="6">Loading outpasses...</td></tr>';
+
+    try {
+        const data = await api("/api/admin/outpasses");
+        outpassesData = getArray(data, "outpasses");
+
+        body.innerHTML = outpassesData.length
+            ? outpassesData.map(outpass => {
+                const id = outpass.id ?? outpass.outpass_id;
+
+                return `
+                    <tr>
+                        <td>${escapeHTML(id)}</td>
+                        <td>${escapeHTML(outpass.student_id || "-")}</td>
+                        <td>${escapeHTML(outpass.reason || outpass.purpose || "-")}</td>
+                        <td>${escapeHTML(outpass.date || outpass.out_date || outpass.created_at || "-")}</td>
+                        <td>${escapeHTML(outpass.status || "Pending")}</td>
+                        <td>
+                            <button class="small-btn green"
+                                onclick="updateRequest('outpasses',${JSON.stringify(String(id))},'Approved')">
+                                Approve
+                            </button>
+                            <button class="small-btn red"
+                                onclick="updateRequest('outpasses',${JSON.stringify(String(id))},'Rejected')">
+                                Reject
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join("")
+            : '<tr><td colspan="6">No outpass records found.</td></tr>';
+
+        showMessage("outpassMessage", "", "");
+
+    } catch (error) {
+        body.innerHTML =
+            `<tr><td colspan="6">${escapeHTML(error.message)}</td></tr>`;
+
+        showMessage("outpassMessage", error.message, "error");
+    }
+}
+
+async function loadComplaints() {
+    const body = document.getElementById("complaintsTableBody");
+    body.innerHTML = '<tr><td colspan="6">Loading complaints...</td></tr>';
+
+    try {
+        const data = await api("/api/admin/complaints");
+        complaintsData = getArray(data, "complaints");
+
+        body.innerHTML = complaintsData.length
+            ? complaintsData.map(complaint => {
+                const id = complaint.id ?? complaint.complaint_id;
+
+                return `
+                    <tr>
+                        <td>${escapeHTML(id)}</td>
+                        <td>${escapeHTML(complaint.student_id || "-")}</td>
+                        <td>${escapeHTML(complaint.complaint || complaint.description || complaint.message || "-")}</td>
+                        <td>${escapeHTML(complaint.date || complaint.created_at || "-")}</td>
+                        <td>${escapeHTML(complaint.status || "Pending")}</td>
+                        <td>
+                            <button class="small-btn green"
+                                onclick="updateRequest('complaints',${JSON.stringify(String(id))},'Resolved')">
+                                Resolve
+                            </button>
+                            <button class="small-btn orange"
+                                onclick="updateRequest('complaints',${JSON.stringify(String(id))},'In Progress')">
+                                In Progress
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join("")
+            : '<tr><td colspan="6">No complaints found.</td></tr>';
+
+        showMessage("complaintMessage", "", "");
+
+    } catch (error) {
+        body.innerHTML =
+            `<tr><td colspan="6">${escapeHTML(error.message)}</td></tr>`;
+
+        showMessage("complaintMessage", error.message, "error");
+    }
+}
+
+async function updateRequest(type, id, status) {
+    if (!confirm("Change status to " + status + "?")) return;
+
+    try {
+        const singular = type === "outpasses" ? "outpass" : "complaint";
+
+        const data = await api(
+            `/api/admin/${singular}/${encodeURIComponent(id)}/status`,
+            {
+                method: "POST",
+                body: JSON.stringify({ status })
+            }
+        );
+
+        showMessage(
+            type === "outpasses" ? "outpassMessage" : "complaintMessage",
+            data.message || "Status updated.",
+            "success"
+        );
+
+        if (type === "outpasses") {
+            await loadOutpasses();
+        } else {
+            await loadComplaints();
+        }
+
+    } catch (error) {
+        showMessage(
+            type === "outpasses" ? "outpassMessage" : "complaintMessage",
+            "Status update failed: " + error.message,
+            "error"
+        );
+    }
+}
+
+async function loadAttendance() {
+    const body = document.getElementById("attendanceTableBody");
+    body.innerHTML = '<tr><td colspan="4">Loading attendance...</td></tr>';
+
+    const date = document.getElementById("attendanceDate").value;
+    let path = "/api/admin/attendance";
+
+    if (date) {
+        path += "?date=" + encodeURIComponent(date);
+    }
+
+    try {
+        const data = await api(path);
+        attendanceData = getArray(data, "attendance");
+
+        body.innerHTML = attendanceData.length
+            ? attendanceData.map(record => `
+                <tr>
+                    <td>${escapeHTML(record.student_id || "-")}</td>
+                    <td>${escapeHTML(record.name || record.student_name || "-")}</td>
+                    <td>${escapeHTML(record.date || record.attendance_date || date || "-")}</td>
+                    <td>${escapeHTML(record.status || "-")}</td>
+                </tr>
+            `).join("")
+            : '<tr><td colspan="4">No attendance records found for this date.</td></tr>';
+
+        showMessage("attendanceMessage", "", "");
+
+    } catch (error) {
+        body.innerHTML =
+            `<tr><td colspan="4">${escapeHTML(error.message)}</td></tr>`;
+
+        showMessage("attendanceMessage", error.message, "error");
+    }
+}
+
+function refreshCurrent() {
+    const active = document.querySelector(".section.active");
+    if (!active) return;
+
+    const id = active.id;
+
+    if (id === "dashboard") loadDashboard();
+    else if (id === "students") loadStudents();
+    else if (id === "outpasses") loadOutpasses();
+    else if (id === "complaints") loadComplaints();
+    else if (id === "attendance") loadAttendance();
+}
+
+document.getElementById("attendanceDate").value =
+    new Date().toISOString().slice(0, 10);
+
+if (getToken()) {
     document.getElementById("loginPanel").classList.add("hidden");
     document.getElementById("adminApp").classList.remove("hidden");
-    await loadDashboard();
-  }catch(error){
-    message.textContent=error.message;
-  }
-}
-
-function logoutAdmin(){
-  clearToken();
-  document.getElementById("adminApp").classList.add("hidden");
-  document.getElementById("loginPanel").classList.remove("hidden");
-}
-
-async function loadDashboard(){
-  try{
-    const data=await api("/api/admin/dashboard");
-    const s=getArray(data,"students");
-    const f=getArray(data,"fees");
-    const o=getArray(data,"outpasses");
-    const c=getArray(data,"complaints");
-
-    document.getElementById("studentCount").textContent=data.student_count??s.length;
-    document.getElementById("outpassCount").textContent=data.outpass_count??o.length;
-    document.getElementById("complaintCount").textContent=data.complaint_count??c.length;
-    document.getElementById("feeCount").textContent=data.fee_count??f.length;
-    showMessage("dashboardMessage","Dashboard updated.","success");
-  }catch(error){
-    showMessage("dashboardMessage",error.message,"error");
-  }
-}
-
-async function loadStudents(){
-  const body=document.getElementById("studentsTableBody");
-  body.innerHTML='<tr><td colspan="5">Loading students...</td></tr>';
-
-  try{
-    const data=await api("/api/admin/students");
-    studentsData=getArray(data,"students");
-    renderStudents();
-  }catch(error){
-    body.innerHTML=`<tr><td colspan="5">${escapeHTML(error.message)}</td></tr>`;
-    showMessage("studentsMessage",error.message,"error");
-  }
-}
-
-function renderStudents(){
-  const query=(document.getElementById("studentSearch").value||"").toLowerCase();
-  const filtered=studentsData.filter(s=>
-    String(s.student_id||s.id||"").toLowerCase().includes(query)||
-    String(s.name||s.full_name||"").toLowerCase().includes(query)
-  );
-
-  document.getElementById("studentsTableBody").innerHTML=filtered.length?filtered.map(s=>`
-    <tr>
-      <td>${escapeHTML(s.student_id||s.id||"-")}</td>
-      <td>${escapeHTML(s.name||s.full_name||"-")}</td>
-      <td>${escapeHTML(s.email||"-")}</td>
-      <td>${escapeHTML(s.phone||s.mobile||"-")}</td>
-      <td>${escapeHTML(s.academic_year||s.year||"-")}</td>
-    </tr>`).join(""):'<tr><td colspan="5">No matching students found.</td></tr>';
-}
-
-async function loadFees(){
-  const body=document.getElementById("feesTableBody");
-  body.innerHTML='<tr><td colspan="8">Loading fees...</td></tr>';
-
-  try{
-    const data=await api("/api/admin/fees");
-    feesData=getArray(data,"fees");
-    renderFees();
-
-    const total=feesData.reduce((sum,f)=>sum+Number(f.total_amount||0),0);
-    const paid=feesData.reduce((sum,f)=>sum+Number(f.paid_amount||0),0);
-    document.getElementById("feesTotal").textContent=money(total);
-    document.getElementById("feesPaid").textContent=money(paid);
-    document.getElementById("feesBalance").textContent=money(Math.max(0,total-paid));
-    showMessage("feeMessage","","");
-  }catch(error){
-    body.innerHTML=`<tr><td colspan="8">${escapeHTML(error.message)}</td></tr>`;
-    showMessage("feeMessage",error.message,"error");
-  }
-}
-
-function renderFees(){
-  const query=(document.getElementById("feeSearch").value||"").toLowerCase();
-  const filtered=feesData.filter(f=>
-    String(f.student_id||"").toLowerCase().includes(query)||
-    String(f.name||f.student_name||"").toLowerCase().includes(query)
-  );
-
-  document.getElementById("feesTableBody").innerHTML=filtered.length?filtered.map(f=>{
-    const id=String(f.student_id||"");
-    const year=Number(f.academic_year||f.year||1);
-    const total=Number(f.total_amount||0);
-    const paid=Number(f.paid_amount||0);
-    const balance=f.balance!==undefined?Number(f.balance):Math.max(0,total-paid);
-
-    return `<tr>
-      <td>${escapeHTML(id)}</td>
-      <td>${escapeHTML(f.name||f.student_name||"-")}</td>
-      <td>${escapeHTML(yearLabel(year))}</td>
-      <td>${money(total)}</td>
-      <td>${money(paid)}</td>
-      <td>${money(balance)}</td>
-      <td>${escapeHTML(f.status||(balance<=0?"Paid":"Pending"))}</td>
-      <td><button class="small-btn" onclick="editFee('${encodeURIComponent(id)}',${year},${total})">Edit</button></td>
-    </tr>`;
-  }).join(""):'<tr><td colspan="8">No fee records found.</td></tr>';
-}
-
-function editFee(encodedId,year,total){
-  document.getElementById("feeStudentId").value=decodeURIComponent(encodedId);
-  document.getElementById("feeAcademicYear").value=String(year);
-  document.getElementById("feeTotalAmount").value=total;
-  document.getElementById("feeStudentId").scrollIntoView({behavior:"smooth",block:"center"});
-}
-
-async function saveFees(){
-  const student_id=document.getElementById("feeStudentId").value.trim();
-  const academic_year=Number(document.getElementById("feeAcademicYear").value);
-  const total_amount=Number(document.getElementById("feeTotalAmount").value);
-
-  if(!student_id){
-    showMessage("feeMessage","Enter the student's ID.","error");
-    return;
-  }
-  if(!Number.isFinite(total_amount)||total_amount<0){
-    showMessage("feeMessage","Enter a valid total fee amount.","error");
-    return;
-  }
-
-  try{
-    const data=await api("/api/admin/fees",{
-      method:"POST",
-      body:JSON.stringify({student_id,academic_year,total_amount})
-    });
-    showMessage("feeMessage",data.message||"Fee updated successfully.","success");
-    await loadFees();
-  }catch(error){
-    showMessage("feeMessage",error.message,"error");
-  }
-}
-
-async function loadOutpasses(){
-  const body=document.getElementById("outpassesTableBody");
-  body.innerHTML='<tr><td colspan="6">Loading outpasses...</td></tr>';
-
-  try{
-    const data=await api("/api/admin/outpasses");
-    outpassesData=getArray(data,"outpasses");
-    body.innerHTML=outpassesData.length?outpassesData.map(o=>{
-      const id=o.id??o.outpass_id;
-      return `<tr>
-        <td>${escapeHTML(id)}</td>
-        <td>${escapeHTML(o.student_id||"-")}</td>
-        <td>${escapeHTML(o.reason||o.purpose||"-")}</td>
-        <td>${escapeHTML(o.date||o.out_date||o.created_at||"-")}</td>
-        <td>${escapeHTML(o.status||"Pending")}</td>
-        <td>
-          <button class="small-btn green" onclick="updateRequest('outpasses',${JSON.stringify(String(id))},'Approved')">Approve</button>
-          <button class="small-btn red" onclick="updateRequest('outpasses',${JSON.stringify(String(id))},'Rejected')">Reject</button>
-        </td>
-      </tr>`;
-    }).join(""):'<tr><td colspan="6">No outpass records found.</td></tr>';
-    showMessage("outpassMessage","","");
-  }catch(error){
-    body.innerHTML=`<tr><td colspan="6">${escapeHTML(error.message)}</td></tr>`;
-    showMessage("outpassMessage",error.message,"error");
-  }
-}
-
-async function loadComplaints(){
-  const body=document.getElementById("complaintsTableBody");
-  body.innerHTML='<tr><td colspan="6">Loading complaints...</td></tr>';
-
-  try{
-    const data=await api("/api/admin/complaints");
-    complaintsData=getArray(data,"complaints");
-    body.innerHTML=complaintsData.length?complaintsData.map(c=>{
-      const id=c.id??c.complaint_id;
-      return `<tr>
-        <td>${escapeHTML(id)}</td>
-        <td>${escapeHTML(c.student_id||"-")}</td>
-        <td>${escapeHTML(c.complaint||c.description||c.message||"-")}</td>
-        <td>${escapeHTML(c.date||c.created_at||"-")}</td>
-        <td>${escapeHTML(c.status||"Pending")}</td>
-        <td>
-          <button class="small-btn green" onclick="updateRequest('complaints',${JSON.stringify(String(id))},'Resolved')">Resolve</button>
-          <button class="small-btn orange" onclick="updateRequest('complaints',${JSON.stringify(String(id))},'In Progress')">In Progress</button>
-        </td>
-      </tr>`;
-    }).join(""):'<tr><td colspan="6">No complaints found.</td></tr>';
-    showMessage("complaintMessage","","");
-  }catch(error){
-    body.innerHTML=`<tr><td colspan="6">${escapeHTML(error.message)}</td></tr>`;
-    showMessage("complaintMessage",error.message,"error");
-  }
-}
-
-async function updateRequest(type,id,status){
-  if(!confirm("Change status to "+status+"?"))return;
-
-  try{
-    const singular=type==="outpasses"?"outpass":"complaint";
-    const data=await api(`/api/admin/${singular}/${encodeURIComponent(id)}/status`,{
-      method:"POST",
-      body:JSON.stringify({status})
-    });
-
-    showMessage(type==="outpasses"?"outpassMessage":"complaintMessage",
-      data.message||"Status updated.","success");
-
-    if(type==="outpasses")await loadOutpasses();
-    else await loadComplaints();
-  }catch(error){
-    showMessage(type==="outpasses"?"outpassMessage":"complaintMessage",
-      "Status update failed: "+error.message,"error");
-  }
-}
-
-async function loadAttendance(){
-  const body=document.getElementById("attendanceTableBody");
-  body.innerHTML='<tr><td colspan="4">Loading attendance...</td></tr>';
-
-  const date=document.getElementById("attendanceDate").value;
-  let path="/api/admin/attendance";
-  if(date)path+="?date="+encodeURIComponent(date);
-
-  try{
-    const data=await api(path);
-    attendanceData=getArray(data,"attendance");
-    body.innerHTML=attendanceData.length?attendanceData.map(a=>`
-      <tr>
-        <td>${escapeHTML(a.student_id||"-")}</td>
-        <td>${escapeHTML(a.name||a.student_name||"-")}</td>
-        <td>${escapeHTML(a.date||a.attendance_date||date||"-")}</td>
-        <td>${escapeHTML(a.status||"-")}</td>
-      </tr>`).join(""):'<tr><td colspan="4">No attendance records found for this date.</td></tr>';
-    showMessage("attendanceMessage","","");
-  }catch(error){
-    body.innerHTML=`<tr><td colspan="4">${escapeHTML(error.message)}</td></tr>`;
-    showMessage("attendanceMessage",error.message,"error");
-  }
-}
-
-function refreshCurrent(){
-  const active=document.querySelector(".section.active");
-  if(!active)return;
-  const id=active.id;
-  if(id==="dashboard")loadDashboard();
-  else if(id==="students")loadStudents();
-  else if(id==="fees")loadFees();
-  else if(id==="outpasses")loadOutpasses();
-  else if(id==="complaints")loadComplaints();
-  else if(id==="attendance")loadAttendance();
-}
-
-document.getElementById("attendanceDate").value=new Date().toISOString().slice(0,10);
-
-if(getToken()){
-  document.getElementById("loginPanel").classList.add("hidden");
-  document.getElementById("adminApp").classList.remove("hidden");
-  loadDashboard();
-}else{
-  document.getElementById("adminApp").classList.add("hidden");
-  document.getElementById("loginPanel").classList.remove("hidden");
+    loadDashboard();
+} else {
+    document.getElementById("adminApp").classList.add("hidden");
+    document.getElementById("loginPanel").classList.remove("hidden");
 }
 </script></body>
 </html>
