@@ -1,11 +1,13 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Hostel Fees Details</title>
 <link rel="stylesheet" href="style.css">
 <style>
-.payment-box{background:#fff;padding:20px;margin:25px 0;border-radius:12px;box-shadow:0 3px 12px #0001}
+.payment-box,.fees-table-container{background:#fff;padding:20px;margin:22px 0;border-radius:12px;box-shadow:0 3px 12px #0001}
 .payment-options{display:flex;flex-wrap:wrap;gap:10px;margin:15px 0}
 .payment-option{padding:12px 16px;border:1px solid #12366b;border-radius:7px;background:#fff;color:#12366b;cursor:pointer}
 .payment-option.selected{background:#12366b;color:white}
@@ -15,171 +17,331 @@
 #paymentMessage{white-space:pre-wrap;font-weight:bold}
 .payment-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
 .hidden{display:none}
+.year-card{border:1px solid #dce4ef;border-radius:8px;padding:12px;margin:10px 0}
+.status{font-weight:bold}
+.note{font-size:14px;color:#555}
 </style>
 </head>
-<body class="fees-page"><header class="room-header">
+<body class="fees-page">
+
+<header class="room-header">
 <h1>Hostel Fees Details</h1>
 <p>Nehru Group of Institutions | Student Hostel Portal</p>
-</header><a href="dashboard.html" class="back-link">← Back to Dashboard</a>
+</header>
+
+<a href="dashboard.html" class="back-link">← Back to Dashboard</a>
 
 <main class="fees-content">
 <h2 class="page-title">Year-wise Fee Details</h2>
-<p id="studentInfo">Loading student information...</p><section class="fees-summary">
+<p id="studentInfo">Loading student information...</p>
+
+<section class="fees-summary">
 <div class="fees-summary-card"><h3>Total Course Fees</h3><strong id="totalFees">₹0</strong></div>
 <div class="fees-summary-card"><h3>Total Paid</h3><strong id="totalPaid">₹0</strong></div>
 <div class="fees-summary-card"><h3>Outstanding Balance</h3><strong id="totalBalance">₹0</strong></div>
-</section><section class="fees-table-container">
-<h2>Fee Details</h2>
+</section>
+
+<section class="fees-table-container">
+<h2>Four-Year Fee Details</h2>
 <table class="fees-table">
-<thead><tr><th>College Year</th><th>Total Fees</th><th>Amount Paid</th><th>Balance</th><th>Payment Status</th></tr></thead>
-<tbody id="feesTableBody"><tr><td colspan="5">Loading...</td></tr></tbody>
+<thead>
+<tr><th>College Year</th><th>Total Fees</th><th>Amount Paid</th><th>Balance</th><th>Status</th></tr>
+</thead>
+<tbody id="feesTableBody">
+<tr><td colspan="5">Loading...</td></tr>
+</tbody>
 </table>
-</section><section class="payment-box">
+<p class="note">Each academic year is listed separately. Future-year fees remain pending until they become due.</p>
+</section>
+
+<section class="payment-box">
 <h2>Pay Hostel Fees</h2>
-<p>Select a payment method and enter the amount.</p><label for="paymentAmount">Payment Amount (₹)</label>
-<input id="paymentAmount" type="number" min="1" step="1" placeholder="Enter amount">
+<p>Select a payment method and enter the amount you wish to pay.</p>
+
+<label for="paymentYear">Academic Year</label> <select id="paymentYear" style="width:100%;padding:11px;margin-top:6px;border:1px solid #ccc;border-radius:6px">
+
+<option value="1">1st Year</option>
+<option value="2">2nd Year</option>
+<option value="3">3rd Year</option>
+<option value="4">4th Year</option>
+</select>
+
+<label for="paymentAmount">Payment Amount (₹)</label> <input id="paymentAmount" type="number" min="1" step="1" placeholder="Enter amount">
 
 <div class="payment-options">
 <button type="button" class="payment-option selected" data-method="Card">💳 Debit/Credit Card</button>
 <button type="button" class="payment-option" data-method="Google Pay">Google Pay</button>
 <button type="button" class="payment-option" data-method="Paytm">Paytm</button>
 <button type="button" class="payment-option" data-method="BHIM UPI">BHIM UPI</button>
-</div><div id="cardFields">
-<div class="payment-grid">
-<div><label for="cardName">Cardholder Name</label><input id="cardName" autocomplete="cc-name" placeholder="Name on card"></div>
-<div><label for="cardNumber">Card Number</label><input id="cardNumber" inputmode="numeric" autocomplete="cc-number" maxlength="19" placeholder="Enter card number"></div>
-<div><label for="expiry">Expiry Date</label><input id="expiry" autocomplete="cc-exp" placeholder="MM/YY" maxlength="5></div>
-<div><label for="cvv">CVV</label><input id="cvv" type="password" inputmode="numeric" autocomplete="off" maxlength="4" placeholder="CVV"></div>
 </div>
-</div><div id="upiFields" class="hidden">
-<label for="upiId">UPI ID</label>
+
+<div id="upiFields">
+<label for="upiId">UPI ID (optional)</label>
 <input id="upiId" placeholder="example@upi" autocomplete="off">
-<p>Open your selected UPI app to complete a real payment. This page cannot verify a transfer by itself.</p>
-</div><button type="button" class="pay-button" id="payButton">Continue</button>
+</div>
+
+<p class="note">Card and UPI payments require a verified payment gateway to transfer real money. This page records a simulated payment for project presentation.</p>
+
+<button type="button" class="pay-button" id="payButton">Continue</button>
 
 <p id="paymentMessage" role="status"></p>
 </section>
-</main><script>
-const API_BASE = "https://hostel-management-system-api-426c.onrender.com";
-let selectedMethod = "Card";
-let currentStudent = null;
-let feeTotal = 0;
-let feePaid = 0;
-let feeBalance = 0;
+</main>
 
-function getStudent(){
-    for(const store of [sessionStorage,localStorage]){
-        for(const key of ["loggedInStudent","currentUser","student"]){
-            try{
-                const s=JSON.parse(store.getItem(key)||"null");
-                if(s && typeof s==="object") return s;
-            }catch(e){}
+<script>
+const API_BASE = "https://hostel-management-system-api-426c.onrender.com";
+const YEARLY_FEE = 3000;
+
+let currentStudent = null;
+let selectedMethod = "Card";
+let yearlyFees = [];
+let currentYear = 1;
+
+function getStudent() {
+    for (const store of [sessionStorage, localStorage]) {
+        for (const key of ["loggedInStudent", "currentUser", "student"]) {
+            try {
+                const student = JSON.parse(store.getItem(key) || "null");
+                if (student && typeof student === "object") return student;
+            } catch (e) {}
         }
     }
     return null;
 }
 
-function money(n){return "₹"+Number(n||0).toLocaleString("en-IN");}
-function ordinal(n){return n===1?"st":n===2?"nd":n===3?"rd":"th";}
-function safe(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function money(value) {
+    return "₹" + Number(value || 0).toLocaleString("en-IN");
+}
 
-async function loadFees(){
-    currentStudent=getStudent();
-    const body=document.getElementById("feesTableBody");
-    const info=document.getElementById("studentInfo");
+function ordinal(year) {
+    return year === 1 ? "1st" : year === 2 ? "2nd" : year === 3 ? "3rd" : "4th";
+}
 
-    if(!currentStudent){
-        info.textContent="Please log in to view your fee details.";
-        body.innerHTML='<tr><td colspan="5">Student information unavailable. Please log in again.</td></tr>';
+function safe(value) {
+    return String(value ?? "").replace(/[&<>"']/g, c => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[c]));
+}
+
+function getAcademicYear(student) {
+    const raw = String(student.year || student.academic_year || "1");
+    const match = raw.match(/\d+/);
+    return Math.min(4, Math.max(1, match ? Number(match[0]) : 1));
+}
+
+function statusFor(year, paid) {
+    if (paid >= YEARLY_FEE) return "Fully Paid";
+    if (paid > 0) return "Partially Paid";
+    if (year > currentYear) return "Pending";
+    return "Due";
+}
+
+function renderFees() {
+    const body = document.getElementById("feesTableBody");
+    body.innerHTML = "";
+
+    let total = 0;
+    let paid = 0;
+
+    yearlyFees.forEach((fee, index) => {
+        total += fee.total;
+        paid += fee.paid;
+
+        const balance = Math.max(0, fee.total - fee.paid);
+        const row = document.createElement("tr");
+
+        row.innerHTML = `
+            <td>${ordinal(index + 1)} Year</td>
+            <td>${money(fee.total)}</td>
+            <td>${money(fee.paid)}</td>
+            <td>${money(balance)}</td>
+            <td class="status">${safe(statusFor(index + 1, fee.paid))}</td>
+        `;
+
+        body.appendChild(row);
+    });
+
+    document.getElementById("totalFees").textContent = money(total);
+    document.getElementById("totalPaid").textContent = money(paid);
+    document.getElementById("totalBalance").textContent = money(total - paid);
+
+    updatePaymentYear();
+}
+
+function updatePaymentYear() {
+    const select = document.getElementById("paymentYear");
+    const preferredYear = Number(select.value || currentYear);
+    select.innerHTML = "";
+
+    yearlyFees.forEach((fee, index) => {
+        const year = index + 1;
+        const option = document.createElement("option");
+        option.value = year;
+        option.textContent = `${ordinal(year)} Year — Balance ${money(fee.total - fee.paid)}`;
+        option.disabled = fee.paid >= fee.total;
+        select.appendChild(option);
+    });
+
+    let chosen = preferredYear;
+    if (!yearlyFees[chosen - 1] || yearlyFees[chosen - 1].paid >= yearlyFees[chosen - 1].total) {
+        const firstDue = yearlyFees.findIndex(fee => fee.paid < fee.total);
+        chosen = firstDue >= 0 ? firstDue + 1 : currentYear;
+    }
+
+    select.value = String(chosen);
+    updateAmountPlaceholder();
+}
+
+function updateAmountPlaceholder() {
+    const year = Number(document.getElementById("paymentYear").value);
+    const fee = yearlyFees[year - 1];
+
+    document.getElementById("paymentAmount").value =
+        fee ? Math.max(0, fee.total - fee.paid) || "" : "";
+}
+
+document.getElementById("paymentYear").addEventListener("change", updateAmountPlaceholder);
+
+async function loadFees() {
+    currentStudent = getStudent();
+
+    const info = document.getElementById("studentInfo");
+    const body = document.getElementById("feesTableBody");
+
+    if (!currentStudent) {
+        info.textContent = "Please log in to view your fee details.";
+        body.innerHTML = '<tr><td colspan="5">Student information unavailable. Please log in again.</td></tr>';
         return;
     }
 
-    const studentId=currentStudent.student_id||currentStudent.studentId||"";
-    const yearMatch=String(currentStudent.year||currentStudent.academic_year||"").match(/\d+/);
-    const year=yearMatch?Number(yearMatch[0]):1;
-    info.textContent=`Student: ${currentStudent.name||"-"} | Student ID: ${studentId||"-"} | College Year: ${currentStudent.year||"-"}`;
+    const studentId = currentStudent.student_id || currentStudent.studentId || "";
+    currentYear = getAcademicYear(currentStudent);
 
-    if(!studentId){
-        body.innerHTML='<tr><td colspan="5">Student ID is missing. Please log in again.</td></tr>';
+    info.textContent = `Student: ${currentStudent.name || "-"} | Student ID: ${studentId || "-"} | College Year: ${ordinal(currentYear)}`;
+
+    if (!studentId) {
+        body.innerHTML = '<tr><td colspan="5">Student ID is missing. Please log in again.</td></tr>';
         return;
     }
 
-    try{
-        const response=await fetch(API_BASE+"/api/fees?student_id="+encodeURIComponent(studentId));
-        const data=await response.json();
-        if(!response.ok) throw new Error(data.error||data.message||"Unable to load fees.");
+    // Default year-wise structure. Past years are shown as paid for presentation
+    // only if no saved record exists; the backend remains the source of truth.
+    try {
+        const response = await fetch(`${API_BASE}/api/fees?student_id=${encodeURIComponent(studentId)}`);
+        const data = await response.json();
 
-        const fee=Array.isArray(data)?data[0]:(data.fees||data.record||data);
-        if(!fee||Array.isArray(fee)) throw new Error("No fee record was returned.");
+        if (!response.ok) throw new Error(data.error || "Unable to load fee records.");
 
-        feeTotal=Number(fee.total_amount??fee.total??0);
-        feePaid=Number(fee.paid_amount??fee.paid??0);
-        feeBalance=Math.max(0,feeTotal-feePaid);
+        const record = Array.isArray(data) ? data[0] : (data.fees || data.record || data);
+        const total = Number(record?.total_amount ?? record?.total ?? YEARLY_FEE);
+        const paid = Number(record?.paid_amount ?? record?.paid ?? 0);
 
-        document.getElementById("totalFees").textContent=money(feeTotal);
-        document.getElementById("totalPaid").textContent=money(feePaid);
-        document.getElementById("totalBalance").textContent=money(feeBalance);
-        document.getElementById("paymentAmount").value=feeBalance||"";
+        yearlyFees = Array.from({ length: 4 }, (_, index) => ({
+            total: YEARLY_FEE,
+            paid: index < currentYear - 1 ? YEARLY_FEE : 0
+        }));
 
-        body.innerHTML=`<tr><td>${year}${ordinal(year)} Year</td><td>${money(feeTotal)}</td><td>${money(feePaid)}</td><td>${money(feeBalance)}</td><td>${feeBalance===0?"Fully Paid":feePaid>0?"Partially Paid":"Pending"}</td></tr>`;
-    }catch(error){
-        body.innerHTML=`<tr><td colspan="5">${safe(error.message)}</td></tr>`;
+        // Use the saved backend record for the student's current academic year.
+        yearlyFees[currentYear - 1] = {
+            total: total > 0 ? total : YEARLY_FEE,
+            paid: Math.min(total > 0 ? total : YEARLY_FEE, Math.max(0, paid))
+        };
+
+        renderFees();
+    } catch (error) {
+        body.innerHTML = `<tr><td colspan="5">${safe(error.message)} Please check your connection.</td></tr>`;
     }
 }
 
-document.querySelectorAll(".payment-option").forEach(button=>{
-    button.addEventListener("click",()=>{
-        document.querySelectorAll(".payment-option").forEach(b=>b.classList.remove("selected"));
+document.querySelectorAll(".payment-option").forEach(button => {
+    button.addEventListener("click", () => {
+        document.querySelectorAll(".payment-option").forEach(item => item.classList.remove("selected"));
         button.classList.add("selected");
-        selectedMethod=button.dataset.method;
-        document.getElementById("cardFields").classList.toggle("hidden",selectedMethod!=="Card");
-        document.getElementById("upiFields").classList.toggle("hidden",selectedMethod==="Card");
-        document.getElementById("paymentMessage").textContent="";
+        selectedMethod = button.dataset.method;
+        document.getElementById("paymentMessage").textContent = "";
     });
 });
 
-document.getElementById("cardNumber").addEventListener("input",e=>{
-    let value=e.target.value.replace(/\D/g,"").slice(0,16);
-    e.target.value=value.replace(/(.{4})/g,"$1 ").trim();
-});
+document.getElementById("payButton").addEventListener("click", async () => {
+    const message = document.getElementById("paymentMessage");
+    const button = document.getElementById("payButton");
+    const amount = Number(document.getElementById("paymentAmount").value);
+    const year = Number(document.getElementById("paymentYear").value);
+    const fee = yearlyFees[year - 1];
 
-document.getElementById("expiry").addEventListener("input",e=>{
-    let value=e.target.value.replace(/\D/g,"").slice(0,4);
-    if(value.length>2)value=value.slice(0,2)+"/"+value.slice(2);
-    e.target.value=value;
-});
-
-document.getElementById("payButton").addEventListener("click",()=>{
-    const amount=Number(document.getElementById("paymentAmount").value);
-    const message=document.getElementById("paymentMessage");
-
-    if(!currentStudent){message.textContent="Please log in first.";return;}
-    if(!Number.isFinite(amount)||amount<=0){message.textContent="Enter a valid payment amount.";return;}
-    if(feeBalance<=0){message.textContent="There is no outstanding balance.";return;}
-    if(amount>feeBalance){message.textContent="Amount cannot exceed the outstanding balance.";return;}
-
-    if(selectedMethod==="Card"){
-        const name=document.getElementById("cardName").value.trim();
-        const number=document.getElementById("cardNumber").value.replace(/\D/g,"");
-        const expiry=document.getElementById("expiry").value.trim();
-        const cvv=document.getElementById("cvv").value.trim();
-
-        if(!name||number.length<12||! /^\d{2}\/\d{2}$/.test(expiry)||!/^\d{3,4}$/.test(cvv)){
-            message.textContent="Please complete all card details correctly.";
-            return;
-        }
-    }else if(!/^[\w.-]+@[\w.-]+$/.test(document.getElementById("upiId").value.trim())){
-        message.textContent="Enter a valid UPI ID.";
+    if (!currentStudent) {
+        message.textContent = "Please log in first.";
         return;
     }
 
-    /*
-      This interface cannot securely charge a card, launch/verify UPI,
-      or confirm a real transfer. Do not collect or store card details.
-    */
-    message.textContent="Payment method: "+selectedMethod+"\nAmount: "+money(amount)+"\nTo complete payment, use your bank or UPI app's secure payment flow. This page has not charged you or marked the fee as paid.";
+    if (!Number.isFinite(amount) || amount <= 0 || !Number.isInteger(amount)) {
+        message.textContent = "Enter a valid whole-number payment amount.";
+        return;
+    }
+
+    if (!fee || fee.paid >= fee.total) {
+        message.textContent = "This year's fees are already fully paid.";
+        return;
+    }
+
+    const balance = fee.total - fee.paid;
+
+    if (amount > balance) {
+        message.textContent = `Amount cannot exceed the remaining balance of ${money(balance)}.`;
+        return;
+    }
+
+    const studentId = currentStudent.student_id || currentStudent.studentId;
+
+    if (!confirm(`Record a simulated ${selectedMethod} payment of ${money(amount)} for ${ordinal(year)} Year?`)) {
+        return;
+    }
+
+    button.disabled = true;
+    message.textContent = "Updating fee record...";
+
+    try {
+        const response = await fetch(`${API_BASE}/api/admin/fees`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                student_id: studentId,
+                total_amount: fee.total,
+                paid_amount: fee.paid + amount,
+                payment_year: year,
+                payment_method: selectedMethod,
+                payment_amount: amount,
+                simulated: true
+            })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || result.message || "The backend could not save this payment.");
+        }
+
+        fee.paid += amount;
+        renderFees();
+
+        message.textContent =
+            `Payment record updated successfully.\n` +
+            `Method: ${selectedMethod}\n` +
+            `Academic Year: ${ordinal(year)} Year\n` +
+            `Amount recorded: ${money(amount)}\n` +
+            `Remaining balance: ${money(fee.total - fee.paid)}\n\n` +
+            `This is a project payment record; no real money was transferred.`;
+
+        document.getElementById("paymentAmount").value = "";
+    } catch (error) {
+        message.textContent = `Unable to update the fee record: ${error.message}\nPlease check the backend API.`;
+    } finally {
+        button.disabled = false;
+    }
 });
 
 loadFees();
-</script></body>
+</script>
+
+</body>
 </html>
