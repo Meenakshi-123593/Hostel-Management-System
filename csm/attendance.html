@@ -1,16 +1,20 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Attendance | NGI Hostel Management System</title>
+
     <style>
         * { box-sizing: border-box; }
+
         body {
             margin: 0;
             font-family: Arial, sans-serif;
             background: #f3f5fa;
             color: #252747;
         }
+
         header {
             background: #252747;
             color: white;
@@ -21,13 +25,16 @@
             flex-wrap: wrap;
             gap: 12px;
         }
+
         header h1 { font-size: 21px; margin: 0; }
         header a { color: white; text-decoration: none; }
+
         main {
             max-width: 1000px;
             margin: 30px auto;
             padding: 0 16px;
         }
+
         .panel {
             background: white;
             padding: 24px;
@@ -35,14 +42,18 @@
             margin-bottom: 20px;
             box-shadow: 0 3px 12px #0000000d;
         }
+
         .student-info { color: #666; }
+
         .record {
             padding: 16px;
             margin: 12px 0;
             border: 1px solid #e4e6ef;
             border-radius: 8px;
         }
+
         .record p { margin: 7px 0; }
+
         .status {
             display: inline-block;
             padding: 5px 10px;
@@ -50,34 +61,93 @@
             background: #e8f5e9;
             font-weight: bold;
         }
-        .message { padding: 12px 0; color: #666; }
+
+        .present { background: #e8f5e9; color: #207245; }
+        .absent { background: #ffebee; color: #b42318; }
+
+        .message {
+            padding: 12px 0;
+            color: #666;
+            overflow-wrap: anywhere;
+        }
+
         button {
             background: #4548a8;
             color: white;
             border: none;
-            padding: 10px 16px;
+            padding: 11px 16px;
             border-radius: 6px;
             cursor: pointer;
+            margin: 5px 5px 5px 0;
         }
-        footer { text-align: center; padding: 25px; color: #777; }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .present-btn { background: #238653; }
+        .absent-btn { background: #c43d4b; }
+
+        footer {
+            text-align: center;
+            padding: 25px;
+            color: #777;
+        }
     </style>
 </head>
+
 <body>
 <header>
     <h1>NGI Hostel Management System</h1>
     <a href="dashboard.html">Back to Dashboard</a>
-</header><main>
+</header>
+
+<main>
     <section class="panel">
         <h2>My Attendance</h2>
+
         <p id="studentInfo" class="student-info"></p>
-        <button type="button" onclick="loadAttendance()">Refresh Attendance</button>
-        <div id="attendanceRecords" class="message">Loading attendance...</div>
+
+        <h3>Mark Today's Attendance</h3>
+        <p id="todayDate"></p>
+        <p>Select your attendance status for today.</p>
+
+        <button type="button" class="present-btn"
+                id="presentButton" onclick="markAttendance('Present')">
+            Present
+        </button>
+
+        <button type="button" class="absent-btn"
+                id="absentButton" onclick="markAttendance('Absent')">
+            Absent
+        </button>
+
+        <p id="submitMessage" class="message" role="status"></p>
+
+        <hr>
+
+        <h3>Attendance History</h3>
+        <button type="button" onclick="loadAttendance()">
+            Refresh Attendance
+        </button>
+
+        <div id="attendanceRecords" class="message">
+            Loading attendance...
+        </div>
     </section>
-</main><footer>Nehru Group of Institutions · Hostel Management System</footer><script>
+</main>
+
+<footer>Nehru Group of Institutions · Hostel Management System</footer>
+
+<script>
 const API_BASE = "https://hostel-management-system-api-426c.onrender.com";
 
 const recordsContainer = document.getElementById("attendanceRecords");
 const studentInfo = document.getElementById("studentInfo");
+const submitMessage = document.getElementById("submitMessage");
+const presentButton = document.getElementById("presentButton");
+const absentButton = document.getElementById("absentButton");
 
 function getLoggedInStudent() {
     const saved =
@@ -91,6 +161,66 @@ function getLoggedInStudent() {
         return JSON.parse(saved);
     } catch (error) {
         return null;
+    }
+}
+
+function getToday() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+}
+
+document.getElementById("todayDate").textContent =
+    "Date: " + getToday();
+
+async function markAttendance(status) {
+    const student = getLoggedInStudent();
+
+    if (!student || !student.student_id) {
+        submitMessage.textContent =
+            "Your login details are missing. Please log in again.";
+        return;
+    }
+
+    presentButton.disabled = true;
+    absentButton.disabled = true;
+    submitMessage.textContent = "Saving attendance...";
+
+    try {
+        const response = await fetch(API_BASE + "/api/attendance", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                student_id: student.student_id,
+                attendance_date: getToday(),
+                status: status
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || "Unable to save attendance.");
+        }
+
+        submitMessage.textContent =
+            "Attendance marked as " + status + " successfully.";
+
+        await loadAttendance();
+
+    } catch (error) {
+        console.error("Attendance submission error:", error);
+
+        submitMessage.textContent =
+            "Could not save attendance. Please try again.";
+    } finally {
+        presentButton.disabled = false;
+        absentButton.disabled = false;
     }
 }
 
@@ -128,7 +258,7 @@ async function loadAttendance() {
 
         if (records.length === 0) {
             recordsContainer.textContent =
-                "No attendance records have been recorded for your account yet.";
+                "No attendance records found. Mark your attendance above.";
             return;
         }
 
@@ -139,26 +269,30 @@ async function loadAttendance() {
             const date = document.createElement("p");
             date.textContent = "Date: " + record.attendance_date;
 
-            const status = document.createElement("p");
-            status.textContent = "Status: " + record.status;
+            const statusText = document.createElement("p");
+            statusText.textContent = "Status: " + record.status;
 
             const badge = document.createElement("span");
-            badge.className = "status";
+            badge.className = "status " +
+                (record.status === "Present" ? "present" : "absent");
             badge.textContent = record.status;
 
             card.appendChild(date);
-            card.appendChild(status);
+            card.appendChild(statusText);
             card.appendChild(badge);
 
             recordsContainer.appendChild(card);
         });
+
     } catch (error) {
         console.error("Attendance loading error:", error);
+
         recordsContainer.textContent =
             "Could not load attendance. Please refresh and try again.";
     }
 }
 
 loadAttendance();
-</script></body>
+</script>
+</body>
 </html>
