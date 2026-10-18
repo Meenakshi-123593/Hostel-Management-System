@@ -1,1023 +1,242 @@
-from flask import Flask, request, jsonify
-import sqlite3
-import os
-from functools import wraps
-from datetime import date
-from werkzeug.security import generate_password_hash, check_password_hash
-from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+==================== STUDENT FEES ====================
 
-app = Flask(__name__)
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATABASE = os.path.join(BASE_DIR, "hostel.db")
-
-
-# ==================== CORS ====================
-
-@app.after_request
-def add_cors_headers(response):
-    origin = request.headers.get("Origin")
-    if origin:
-        response.headers["Access-Control-Allow-Origin"] = origin
-        response.headers["Vary"] = "Origin"
-
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-    return response
-
-
-# ==================== DATABASE ====================
-
-def get_db():
-    connection = sqlite3.connect(DATABASE)
-    connection.row_factory = sqlite3.Row
-    return connection
-
-
-def create_table():
-    connection = get_db()
-    try:
-        connection.execute("""
-            CREATE TABLE IF NOT EXISTS students (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                student_id TEXT UNIQUE NOT NULL,
-                name TEXT NOT NULL,
-                email TEXT UNIQUE NOT NULL,
-                username TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL,
-                dob TEXT,
-                department TEXT,
-                year TEXT,
-                academic_year TEXT,
-                room_number TEXT,
-                phone TEXT
-            )
-        """)
-
-        columns = {
-            row["name"]
-            for row in connection.execute(
-                "PRAGMA table_info(students)"
-            ).fetchall()
-        }
-
-        for column in [
-            "dob", "department", "year",
-            "academic_year", "room_number", "phone"
-        ]:
-            if column not in columns:
-                connection.execute(
-                    f"ALTER TABLE students ADD COLUMN {column} TEXT"
-                )
-
-        connection.executescript("""
-            CREATE TABLE IF NOT EXISTS outpasses (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                student_id TEXT NOT NULL,
-                student_name TEXT,
-                reason TEXT NOT NULL,
-                destination TEXT,
-                from_date TEXT,
-                to_date TEXT,
-                status TEXT DEFAULT 'Pending',
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS complaints (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                student_id TEXT NOT NULL,
-                student_name TEXT,
-                category TEXT,
-                description TEXT NOT NULL,
-                status TEXT DEFAULT 'Pending',
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS attendance (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                student_id TEXT NOT NULL,
-                student_name TEXT,
-                attendance_date TEXT NOT NULL,
-                status TEXT NOT NULL,
-                UNIQUE(student_id, attendance_date)
-            );
-
-            CREATE TABLE IF NOT EXISTS fees (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                student_id TEXT NOT NULL UNIQUE,
-                total_amount REAL DEFAULT 0,
-                paid_amount REAL DEFAULT 0,
-                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-            );
-        """)
-
-        connection.commit()
-    finally:
-        connection.close()
-
-
-# ==================== AUTHENTICATION ====================
-
-def get_serializer():
-    secret = os.environ.get("ADMIN_TOKEN_SECRET")
-    if not secret:
-        return None
-
-    return URLSafeTimedSerializer(
-        secret, salt="hostel-admin-auth"
-    )
-
-
-def require_admin():
-    serializer = get_serializer()
-
-    if serializer is None:
-        return None, (
-            jsonify({
-                "success": False,
-                "message": "Admin token secret is not configured."
-            }), 503
-        )
-
-    authorization = request.headers.get("Authorization", "")
-    parts = authorization.split(" ", 1)
-
-    if len(parts) != 2 or parts[0].lower() != "bearer":
-        return None, (
-            jsonify({
-                "success": False,
-                "message": "Admin login required."
-            }), 401
-        )
-
-    try:
-        data = serializer.loads(parts[1], max_age=3600)
-
-        if data.get("role") != "admin":
-            raise BadSignature("Invalid role")
-
-        return data, None
-
-    except (BadSignature, SignatureExpired):
-        return None, (
-            jsonify({
-                "success": False,
-                "message": "Admin session expired. Please log in again."
-            }), 401
-        )
-
-
-def admin_required(function):
-    @wraps(function)
-    def wrapper(*args, **kwargs):
-        if request.method == "OPTIONS":
-            return "", 204
-
-        _, error = require_admin()
-        if error:
-            return error
-
-        return function(*args, **kwargs)
-
-    return wrapper
-
-
-def read_json():
-    return request.get_json(silent=True) or {}
-
-
-def get_student(connection, student_id):
-    return connection.execute(
-        "SELECT * FROM students WHERE student_id = ?",
-        (str(student_id).strip(),)
-    ).fetchone()
-
-
-def student_not_found():
-    return jsonify({
-        "success": False,
-        "message": "Registered student not found."
-    }), 404
-
-
-def fee_status(total, paid):
-    if total > 0 and paid >= total:
-        return "Paid"
-    if paid > 0:
-        return "Partially Paid"
-    return "Unpaid"
-
-
-def get_all_fees(connection):
-    rows = connection.execute("""
-        SELECT
-            s.student_id,
-            s.name AS student_name,
-            COALESCE(f.total_amount, 0) AS total_amount,
-            COALESCE(f.paid_amount, 0) AS paid_amount,
-            COALESCE(f.total_amount, 0)
-                - COALESCE(f.paid_amount, 0) AS balance
-        FROM students s
-        LEFT JOIN fees f ON s.student_id = f.student_id
-        ORDER BY s.id DESC
-    """).fetchall()
-
-    result = []
-    for row in rows:
-        item = dict(row)
-        item["status"] = fee_status(
-            float(item["total_amount"]),
-            float(item["paid_amount"])
-        )
-        result.append(item)
-
-    return result
-
-
-# ==================== HOME ====================
-
-@app.route("/", methods=["GET"])
-def home():
-    return jsonify({
-        "message": "Nehru Group of Institutions Hostel Management System",
-        "status": "Backend is running successfully"
-    })
-
-
-# ==================== STUDENT REGISTRATION ====================
-
-@app.route("/api/register", methods=["POST", "OPTIONS"])
-def register():
-    if request.method == "OPTIONS":
-        return "", 204
-
-    data = read_json()
-
-    student_id = str(data.get("student_id", "")).strip()
-    name = str(data.get("name", "")).strip()
-    email = str(data.get("email", "")).strip().lower()
-    username = str(data.get("username", "")).strip()
-    password = data.get("password", "")
-
-    if not all([student_id, name, email, username, password]):
-        return jsonify({
-            "success": False,
-            "message": "Please fill in all required fields."
-        }), 400
-
-    if not isinstance(password, str) or len(password) < 6:
-        return jsonify({
-            "success": False,
-            "message": "Password must contain at least 6 characters."
-        }), 400
-
-    connection = get_db()
-    try:
-        connection.execute("""
-            INSERT INTO students (
-                student_id, name, email, username, password,
-                dob, department, year, academic_year, room_number, phone
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            student_id, name, email, username,
-            generate_password_hash(password),
-            str(data.get("dob", "")),
-            str(data.get("department", "")),
-            str(data.get("year", "")),
-            str(data.get("academicYear", data.get("academic_year", ""))),
-            str(data.get("roomNumber", data.get("room_number", ""))),
-            str(data.get("phone", ""))
-        ))
-
-        connection.commit()
-        return jsonify({
-            "success": True,
-            "message": "Registration successful!"
-        }), 201
-
-    except sqlite3.IntegrityError:
-        return jsonify({
-            "success": False,
-            "message": "Student ID, email, or username already exists."
-        }), 409
-
-    except sqlite3.Error:
-        app.logger.exception("Registration error")
-        return jsonify({
-            "success": False,
-            "message": "A database error occurred."
-        }), 500
-
-    finally:
-        connection.close()
-
-
-# ==================== STUDENT LOGIN ====================
-
-@app.route("/api/login", methods=["POST", "OPTIONS"])
-def login():
-    if request.method == "OPTIONS":
-        return "", 204
-
-    data = read_json()
-    username = str(data.get("username", "")).strip()
-    password = data.get("password", "")
-
-    if not username or not password:
-        return jsonify({
-            "success": False,
-            "message": "Enter your username and password."
-        }), 400
-
-    connection = get_db()
-    try:
-        student = connection.execute(
-            "SELECT * FROM students WHERE username = ?",
-            (username,)
-        ).fetchone()
-
-        if not student or not check_password_hash(
-            student["password"], password
-        ):
-            return jsonify({
-                "success": False,
-                "message": "Invalid username or password."
-            }), 401
-
-        return jsonify({
-            "success": True,
-            "message": "Login successful!",
-            "student": {
-                "student_id": student["student_id"],
-                "name": student["name"],
-                "email": student["email"],
-                "username": student["username"],
-                "dob": student["dob"],
-                "department": student["department"],
-                "year": student["year"],
-                "academic_year": student["academic_year"],
-                "room_number": student["room_number"],
-                "phone": student["phone"]
-            }
-        }), 200
-
-    except sqlite3.Error:
-        app.logger.exception("Student login error")
-        return jsonify({
-            "success": False,
-            "message": "A database error occurred."
-        }), 500
-
-    finally:
-        connection.close()
-
-
-# ==================== ADMIN LOGIN ====================
-
-@app.route("/api/admin/login", methods=["POST", "OPTIONS"])
-def admin_login():
-    if request.method == "OPTIONS":
-        return "", 204
-
-    data = read_json()
-    username = str(data.get("username", "")).strip()
-    password = data.get("password", "")
-
-    admin_username = os.environ.get("ADMIN_USERNAME")
-    admin_password = os.environ.get("ADMIN_PASSWORD")
-    serializer = get_serializer()
-
-    if not username or not password:
-        return jsonify({
-            "success": False,
-            "message": "Enter admin username and password."
-        }), 400
-
-    if not all([admin_username, admin_password, serializer]):
-        return jsonify({
-            "success": False,
-            "message": "Admin configuration is incomplete on the server."
-        }), 503
-
-    if username != admin_username or password != admin_password:
-        return jsonify({
-            "success": False,
-            "message": "Invalid admin username or password."
-        }), 401
-
-    token = serializer.dumps({
-        "username": admin_username,
-        "role": "admin"
-    })
-
-    return jsonify({
-        "success": True,
-        "message": "Admin login successful.",
-        "token": token
-    })
-
-
-# ==================== ADMIN STUDENTS ====================
-
-@app.route("/api/admin/students", methods=["GET", "OPTIONS"])
-@admin_required
-def admin_students():
-    connection = get_db()
-    try:
-        rows = connection.execute("""
-            SELECT student_id, name, email, username, dob,
-                   department, year, academic_year, room_number, phone
-            FROM students ORDER BY id DESC
-        """).fetchall()
-
-        students = [dict(row) for row in rows]
-        return jsonify({
-            "success": True,
-            "count": len(students),
-            "students": students
-        })
-
-    except sqlite3.Error:
-        app.logger.exception("Loading students failed")
-        return jsonify({
-            "success": False,
-            "message": "Unable to load student records."
-        }), 500
-
-    finally:
-        connection.close()
-
-
-# ==================== STUDENT OUTPASSES ====================
-
-@app.route("/api/outpasses", methods=["GET", "POST", "OPTIONS"])
-def outpasses():
-    if request.method == "OPTIONS":
-        return "", 204
-
-    connection = get_db()
-    try:
-        if request.method == "POST":
-            data = read_json()
-            student_id = str(data.get("student_id", "")).strip()
-            reason = str(data.get("reason", "")).strip()
-
-            if not student_id or not reason:
-                return jsonify({
-                    "success": False,
-                    "message": "Student ID and reason are required."
-                }), 400
-
-            student = get_student(connection, student_id)
-            if not student:
-                return student_not_found()
-
-            connection.execute("""
-                INSERT INTO outpasses (
-                    student_id, student_name, reason, destination,
-                    from_date, to_date, status
-                )
-                VALUES (?, ?, ?, ?, ?, ?, 'Pending')
-            """, (
-                student_id, student["name"], reason,
-                str(data.get("destination", "")),
-                str(data.get("from_date", data.get("fromDate", ""))),
-                str(data.get("to_date", data.get("toDate", "")))
-            ))
-
-            connection.commit()
-            return jsonify({
-                "success": True,
-                "message": "Outpass request submitted."
-            }), 201
-
-        student_id = request.args.get("student_id", "").strip()
-        if not student_id:
-            return jsonify({
-                "success": False,
-                "message": "Provide student_id."
-            }), 400
-
-        rows = connection.execute("""
-            SELECT * FROM outpasses
-            WHERE student_id = ? ORDER BY id DESC
-        """, (student_id,)).fetchall()
-
-        return jsonify({
-            "success": True,
-            "outpasses": [dict(row) for row in rows]
-        })
-
-    finally:
-        connection.close()
-
-
-@app.route("/api/admin/outpasses", methods=["GET", "OPTIONS"])
-@admin_required
-def admin_outpasses():
-    connection = get_db()
-    try:
-        rows = connection.execute(
-            "SELECT * FROM outpasses ORDER BY id DESC"
-        ).fetchall()
-
-        records = [dict(row) for row in rows]
-        return jsonify({
-            "success": True,
-            "count": len(records),
-            "outpasses": records
-        })
-    finally:
-        connection.close()
-
-
-@app.route(
-    "/api/admin/outpasses/<int:outpass_id>/status",
-    methods=["POST", "OPTIONS"]
-)
-@admin_required
-def update_outpass(outpass_id):
-    if request.method == "OPTIONS":
-        return "", 204
-
-    status = str(read_json().get("status", "")).strip().title()
-    if status not in ["Approved", "Rejected", "Pending"]:
-        return jsonify({
-            "success": False,
-            "message": "Invalid outpass status."
-        }), 400
-
-    connection = get_db()
-    try:
-        cursor = connection.execute(
-            "UPDATE outpasses SET status = ? WHERE id = ?",
-            (status, outpass_id)
-        )
-        connection.commit()
-
-        if cursor.rowcount == 0:
-            return jsonify({
-                "success": False,
-                "message": "Outpass not found."
-            }), 404
-
-        return jsonify({
-            "success": True,
-            "message": "Outpass status updated.",
-            "status": status
-        })
-    finally:
-        connection.close()
-
-
-# ==================== STUDENT COMPLAINTS ====================
-
-@app.route("/api/complaints", methods=["GET", "POST", "OPTIONS"])
-def complaints():
-    if request.method == "OPTIONS":
-        return "", 204
-
-    connection = get_db()
-    try:
-        if request.method == "POST":
-            data = read_json()
-            student_id = str(data.get("student_id", "")).strip()
-            description = str(
-                data.get("description", data.get("complaint", ""))
-            ).strip()
-
-            if not student_id or not description:
-                return jsonify({
-                    "success": False,
-                    "message": "Student ID and complaint are required."
-                }), 400
-
-            student = get_student(connection, student_id)
-            if not student:
-                return student_not_found()
-
-            connection.execute("""
-                INSERT INTO complaints (
-                    student_id, student_name, category, description, status
-                )
-                VALUES (?, ?, ?, ?, 'Pending')
-            """, (
-                student_id, student["name"],
-                str(data.get("category", "General")),
-                description
-            ))
-
-            connection.commit()
-            return jsonify({
-                "success": True,
-                "message": "Complaint submitted successfully."
-            }), 201
-
-        student_id = request.args.get("student_id", "").strip()
-        if not student_id:
-            return jsonify({
-                "success": False,
-                "message": "Provide student_id."
-            }), 400
-
-        rows = connection.execute("""
-            SELECT * FROM complaints
-            WHERE student_id = ? ORDER BY id DESC
-        """, (student_id,)).fetchall()
-
-        return jsonify({
-            "success": True,
-            "complaints": [dict(row) for row in rows]
-        })
-
-    finally:
-        connection.close()
-
-
-@app.route("/api/admin/complaints", methods=["GET", "OPTIONS"])
-@admin_required
-def admin_complaints():
-    connection = get_db()
-    try:
-        rows = connection.execute(
-            "SELECT * FROM complaints ORDER BY id DESC"
-        ).fetchall()
-
-        records = [dict(row) for row in rows]
-        return jsonify({
-            "success": True,
-            "count": len(records),
-            "complaints": records
-        })
-    finally:
-        connection.close()
-
-
-@app.route(
-    "/api/admin/complaints/<int:complaint_id>/status",
-    methods=["POST", "OPTIONS"]
-)
-@admin_required
-def update_complaint(complaint_id):
-    if request.method == "OPTIONS":
-        return "", 204
-
-    status = str(read_json().get("status", "")).strip().title()
-    allowed = ["Pending", "In Progress", "Resolved", "Rejected"]
-
-    if status not in allowed:
-        return jsonify({
-            "success": False,
-            "message": "Invalid complaint status."
-        }), 400
-
-    connection = get_db()
-    try:
-        cursor = connection.execute(
-            "UPDATE complaints SET status = ? WHERE id = ?",
-            (status, complaint_id)
-        )
-        connection.commit()
-
-        if cursor.rowcount == 0:
-            return jsonify({
-                "success": False,
-                "message": "Complaint not found."
-            }), 404
-
-        return jsonify({
-            "success": True,
-            "message": "Complaint status updated."
-        })
-    finally:
-        connection.close()
-
-
-# ==================== STUDENT ATTENDANCE ====================
-
-@app.route("/api/attendance", methods=["GET", "OPTIONS"])
-def student_attendance():
-    if request.method == "OPTIONS":
-        return "", 204
-
-    student_id = request.args.get("student_id", "").strip()
-    if not student_id:
-        return jsonify({
-            "success": False,
-            "message": "Provide student_id."
-        }), 400
-
-    connection = get_db()
-    try:
-        rows = connection.execute("""
-            SELECT * FROM attendance
-            WHERE student_id = ?
-            ORDER BY attendance_date DESC
-        """, (student_id,)).fetchall()
-
-        records = [dict(row) for row in rows]
-        return jsonify({
-            "success": True,
-            "attendance": records,
-            "count": len(records)
-        })
-    finally:
-        connection.close()
-
-
-# ==================== ADMIN ATTENDANCE ====================
-
-@app.route("/api/admin/attendance", methods=["GET", "POST", "OPTIONS"])
-@admin_required
-def manage_attendance():
-    if request.method == "OPTIONS":
-        return "", 204
-
-    connection = get_db()
-    try:
-        if request.method == "POST":
-            data = read_json()
-            student_id = str(data.get("student_id", "")).strip()
-            attendance_date = str(
-                data.get("attendance_date", data.get("date", ""))
-            ).strip()
-            status = str(data.get("status", "")).strip().title()
-
-            if not student_id or not attendance_date:
-                return jsonify({
-                    "success": False,
-                    "message": "Student ID and date are required."
-                }), 400
-
-            if status not in ["Present", "Absent", "Leave"]:
-                return jsonify({
-                    "success": False,
-                    "message": "Choose Present, Absent, or Leave."
-                }), 400
-
-            student = get_student(connection, student_id)
-            if not student:
-                return student_not_found()
-
-            connection.execute("""
-                INSERT INTO attendance (
-                    student_id, student_name, attendance_date, status
-                )
-                VALUES (?, ?, ?, ?)
-                ON CONFLICT(student_id, attendance_date)
-                DO UPDATE SET
-                    student_name = excluded.student_name,
-                    status = excluded.status
-            """, (
-                student_id, student["name"], attendance_date, status
-            ))
-
-            connection.commit()
-            return jsonify({
-                "success": True,
-                "message": "Attendance saved."
-            }), 201
-
-        attendance_date = request.args.get(
-            "date", date.today().isoformat()
-        ).strip()
-
-        # Show every registered student for the selected date,
-        # even when attendance has not yet been marked.
-        rows = connection.execute("""
-            SELECT
-                s.student_id,
-                s.name AS student_name,
-                ? AS attendance_date,
-                COALESCE(a.status, 'Not Marked') AS status,
-                a.id
-            FROM students s
-            LEFT JOIN attendance a
-              ON a.student_id = s.student_id
-             AND a.attendance_date = ?
-            ORDER BY s.name COLLATE NOCASE
-        """, (attendance_date, attendance_date)).fetchall()
-
-        records = [dict(row) for row in rows]
-        marked = sum(
-            1 for item in records
-            if item["status"] != "Not Marked"
-        )
-
-        return jsonify({
-            "success": True,
-            "date": attendance_date,
-            "count": len(records),
-            "marked_count": marked,
-            "attendance": records
-        })
-
-    finally:
-        connection.close()
-
-
-# ==================== STUDENT FEES ====================
+YEARLY_HOSTEL_FEE = 3000
 
 @app.route("/api/fees", methods=["GET", "OPTIONS"])
 def student_fees():
-    if request.method == "OPTIONS":
-        return "", 204
+if request.method == "OPTIONS":
+return "", 204
 
-    student_id = request.args.get("student_id", "").strip()
-    if not student_id:
+student_id = request.args.get("student_id", "").strip()
+
+if not student_id:
+    return jsonify({
+        "success": False,
+        "message": "Provide student_id."
+    }), 400
+
+connection = get_db()
+
+try:
+    student = get_student(connection, student_id)
+
+    if not student:
+        return student_not_found()
+
+    year_text = str(
+        student["year"] or student["academic_year"] or "1"
+    )
+    year_match = __import__("re").search(r"\d+", year_text)
+    current_year = int(year_match.group()) if year_match else 1
+    current_year = min(max(current_year, 1), 4)
+
+    row = connection.execute(
+        "SELECT * FROM fees WHERE student_id = ?",
+        (student_id,)
+    ).fetchone()
+
+    if row:
+        fee = dict(row)
+        total = float(fee["total_amount"] or 0)
+        paid = float(fee["paid_amount"] or 0)
+    else:
+        total = YEARLY_HOSTEL_FEE
+        paid = 0
+
+    return jsonify({
+        "success": True,
+        "fees": {
+            "student_id": student_id,
+            "student_name": student["name"],
+            "year": current_year,
+            "total_amount": total,
+            "paid_amount": paid,
+            "balance": max(total - paid, 0),
+            "status": fee_status(total, paid)
+        }
+    })
+
+finally:
+    connection.close()
+
+==================== STUDENT PAYMENT RECORDING ====================
+
+@app.route("/api/fees/payment", methods=["POST", "OPTIONS"])
+def record_student_payment():
+if request.method == "OPTIONS":
+return "", 204
+
+data = read_json()
+
+student_id = str(data.get("student_id", "")).strip()
+
+try:
+    amount = float(data.get("payment_amount", 0))
+except (TypeError, ValueError):
+    return jsonify({
+        "success": False,
+        "message": "Enter a valid payment amount."
+    }), 400
+
+if not student_id or amount <= 0 or not amount.is_integer():
+    return jsonify({
+        "success": False,
+        "message": "A valid student ID and whole-number amount are required."
+    }), 400
+
+connection = get_db()
+
+try:
+    student = get_student(connection, student_id)
+
+    if not student:
+        return student_not_found()
+
+    year_text = str(
+        student["year"] or student["academic_year"] or "1"
+    )
+    year_match = __import__("re").search(r"\d+", year_text)
+    current_year = int(year_match.group()) if year_match else 1
+    current_year = min(max(current_year, 1), 4)
+
+    # This existing table stores one aggregate fee record per student.
+    # The requested year must match the student's registered year.
+    requested_year = int(data.get("payment_year", current_year))
+
+    if requested_year != current_year:
         return jsonify({
             "success": False,
-            "message": "Provide student_id."
+            "message": "Payments can only be recorded for the student's registered academic year."
         }), 400
 
-    connection = get_db()
-    try:
-        student = get_student(connection, student_id)
-        if not student:
-            return student_not_found()
+    row = connection.execute(
+        "SELECT * FROM fees WHERE student_id = ?",
+        (student_id,)
+    ).fetchone()
 
-        row = connection.execute(
-            "SELECT * FROM fees WHERE student_id = ?",
-            (student_id,)
-        ).fetchone()
+    if row:
+        total = float(row["total_amount"] or 0)
+        paid = float(row["paid_amount"] or 0)
+    else:
+        total = YEARLY_HOSTEL_FEE
+        paid = 0
 
-        if row:
-            fee = dict(row)
-        else:
-            fee = {
-                "student_id": student_id,
-                "total_amount": 0,
-                "paid_amount": 0
-            }
+    # Initialize a new fee record for the student's current year.
+    if total <= 0:
+        total = YEARLY_HOSTEL_FEE
 
-        total = float(fee.get("total_amount", 0) or 0)
-        paid = float(fee.get("paid_amount", 0) or 0)
-
-        fee["balance"] = max(total - paid, 0)
-        fee["status"] = fee_status(total, paid)
-
+    if amount > total - paid:
         return jsonify({
-            "success": True,
-            "fees": fee
-        })
-    finally:
-        connection.close()
+            "success": False,
+            "message": "Payment exceeds the outstanding balance.",
+            "balance": max(total - paid, 0)
+        }), 400
 
+    # Record a simulated payment for the project presentation.
+    # No card details or UPI PINs are accepted or stored here.
+    new_paid = paid + amount
 
-# ==================== ADMIN FEES ====================
+    connection.execute("""
+        INSERT INTO fees (
+            student_id, total_amount, paid_amount, updated_at
+        )
+        VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(student_id)
+        DO UPDATE SET
+            total_amount = excluded.total_amount,
+            paid_amount = excluded.paid_amount,
+            updated_at = CURRENT_TIMESTAMP
+    """, (student_id, total, new_paid))
+
+    connection.commit()
+
+    return jsonify({
+        "success": True,
+        "message": "Payment record updated.",
+        "student_id": student_id,
+        "total_amount": total,
+        "paid_amount": new_paid,
+        "balance": max(total - new_paid, 0),
+        "status": fee_status(total, new_paid),
+        "simulated": True
+    }), 200
+
+except (ValueError, TypeError):
+    return jsonify({
+        "success": False,
+        "message": "Invalid payment details."
+    }), 400
+
+except sqlite3.Error:
+    connection.rollback()
+    app.logger.exception("Recording student payment failed")
+    return jsonify({
+        "success": False,
+        "message": "Unable to save the payment record."
+    }), 500
+
+finally:
+    connection.close()
+
+==================== ADMIN FEES ====================
 
 @app.route("/api/admin/fees", methods=["GET", "POST", "OPTIONS"])
 @admin_required
 def manage_fees():
-    if request.method == "OPTIONS":
-        return "", 204
+if request.method == "OPTIONS":
+return "", 204
 
-    connection = get_db()
-    try:
-        if request.method == "POST":
-            data = read_json()
-            student_id = str(data.get("student_id", "")).strip()
+connection = get_db()
 
-            try:
-                total = float(data.get("total_amount", 0))
-                paid = float(data.get("paid_amount", 0))
-            except (TypeError, ValueError):
-                return jsonify({
-                    "success": False,
-                    "message": "Fee amounts must be numbers."
-                }), 400
+try:
+    if request.method == "POST":
+        data = read_json()
+        student_id = str(data.get("student_id", "")).strip()
 
-            if (
-                not student_id
-                or total < 0
-                or paid < 0
-                or paid > total
-            ):
-                return jsonify({
-                    "success": False,
-                    "message": "Check student ID and fee amounts."
-                }), 400
-
-            student = get_student(connection, student_id)
-            if not student:
-                return student_not_found()
-
-            connection.execute("""
-                INSERT INTO fees (
-                    student_id, total_amount, paid_amount, updated_at
-                )
-                VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-                ON CONFLICT(student_id)
-                DO UPDATE SET
-                    total_amount = excluded.total_amount,
-                    paid_amount = excluded.paid_amount,
-                    updated_at = CURRENT_TIMESTAMP
-            """, (student_id, total, paid))
-
-            connection.commit()
+        try:
+            total = float(data.get("total_amount", 0))
+            paid = float(data.get("paid_amount", 0))
+        except (TypeError, ValueError):
             return jsonify({
-                "success": True,
-                "message": "Fee record saved."
-            }), 201
+                "success": False,
+                "message": "Fee amounts must be numbers."
+            }), 400
 
-        records = get_all_fees(connection)
-        return jsonify({
-            "success": True,
-            "count": len(records),
-            "fees": records
-        })
+        if not student_id or total < 0 or paid < 0 or paid > total:
+            return jsonify({
+                "success": False,
+                "message": "Check student ID and fee amounts."
+            }), 400
 
-    finally:
-        connection.close()
+        if not get_student(connection, student_id):
+            return student_not_found()
 
+        connection.execute("""
+            INSERT INTO fees (
+                student_id, total_amount, paid_amount, updated_at
+            )
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(student_id)
+            DO UPDATE SET
+                total_amount = excluded.total_amount,
+                paid_amount = excluded.paid_amount,
+                updated_at = CURRENT_TIMESTAMP
+        """, (student_id, total, paid))
 
-# ==================== ADMIN DASHBOARD SUMMARY ====================
-
-@app.route("/api/admin/dashboard", methods=["GET", "OPTIONS"])
-@admin_required
-def admin_dashboard():
-    if request.method == "OPTIONS":
-        return "", 204
-
-    connection = get_db()
-    try:
-        students = [
-            dict(row) for row in connection.execute("""
-                SELECT student_id, name, email, department, year,
-                       academic_year, room_number, phone
-                FROM students ORDER BY id DESC
-            """).fetchall()
-        ]
-
-        outpasses = [
-            dict(row) for row in connection.execute(
-                "SELECT * FROM outpasses ORDER BY id DESC"
-            ).fetchall()
-        ]
-
-        complaints = [
-            dict(row) for row in connection.execute(
-                "SELECT * FROM complaints ORDER BY id DESC"
-            ).fetchall()
-        ]
-
-        fees = get_all_fees(connection)
-
-        today = date.today().isoformat()
-        attendance = [
-            dict(row) for row in connection.execute("""
-                SELECT
-                    s.student_id,
-                    s.name AS student_name,
-                    ? AS attendance_date,
-                    COALESCE(a.status, 'Not Marked') AS status,
-                    a.id
-                FROM students s
-                LEFT JOIN attendance a
-                  ON a.student_id = s.student_id
-                 AND a.attendance_date = ?
-                ORDER BY s.name COLLATE NOCASE
-            """, (today, today)).fetchall()
-        ]
+        connection.commit()
 
         return jsonify({
             "success": True,
-            "student_count": len(students),
-            "outpass_count": len(outpasses),
-            "pending_outpass_count": sum(
-                1 for item in outpasses
-                if item["status"] == "Pending"
-            ),
-            "complaint_count": len(complaints),
-            "pending_complaint_count": sum(
-                1 for item in complaints
-                if item["status"] == "Pending"
-            ),
-            "attendance_count": len(attendance),
-            "marked_attendance_count": sum(
-                1 for item in attendance
-                if item["status"] != "Not Marked"
-            ),
-            "fee_count": len(fees),
-            "unpaid_fee_count": sum(
-                1 for item in fees
-                if item["status"] != "Paid"
-            ),
-            "students": students,
-            "outpasses": outpasses,
-            "complaints": complaints,
-            "attendance": attendance,
-            "fees": fees
-        })
+            "message": "Fee record saved."
+        }), 200
 
-    finally:
-        connection.close()
+    records = get_all_fees(connection)
 
+    return jsonify({
+        "success": True,
+        "count": len(records),
+        "fees": records
+    })
 
-# ==================== START APPLICATION ====================
-
-create_table()
-
-if __name__ == "__main__":
-    app.run(debug=False)
+finally:
+    connection.close()
