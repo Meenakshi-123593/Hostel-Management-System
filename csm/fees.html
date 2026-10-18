@@ -5,12 +5,16 @@
 <title>Hostel Fees Details</title>
 <link rel="stylesheet" href="style.css">
 <style>
-.payment-section{background:#fff;padding:20px;margin-top:24px;border-radius:10px;box-shadow:0 2px 8px #0001}
-.payment-options{display:flex;flex-wrap:wrap;gap:12px;margin:15px 0}
-.payment-option{padding:12px 16px;border:1px solid #12366b;border-radius:8px;background:white;color:#12366b;cursor:pointer}
+.payment-box{background:#fff;padding:20px;margin:25px 0;border-radius:12px;box-shadow:0 3px 12px #0001}
+.payment-options{display:flex;flex-wrap:wrap;gap:10px;margin:15px 0}
+.payment-option{padding:12px 16px;border:1px solid #12366b;border-radius:7px;background:#fff;color:#12366b;cursor:pointer}
 .payment-option.selected{background:#12366b;color:white}
-.pay-button{padding:12px 20px;background:#12366b;color:white;border:0;border-radius:6px;cursor:pointer}
-#paymentMessage{white-space:pre-wrap}
+.payment-box label{display:block;font-weight:bold;margin-top:12px}
+.payment-box input{width:100%;padding:11px;margin-top:6px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box}
+.pay-button{background:#12366b;color:#fff;padding:12px 20px;border:0;border-radius:7px;margin-top:18px;cursor:pointer}
+#paymentMessage{white-space:pre-wrap;font-weight:bold}
+.payment-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.hidden{display:none}
 </style>
 </head>
 <body class="fees-page"><header class="room-header">
@@ -20,179 +24,160 @@
 
 <main class="fees-content">
 <h2 class="page-title">Year-wise Fee Details</h2>
-<p id="studentInfo">Loading student details...</p><section class="fees-summary">
-<div class="fees-summary-card">
-<h3>Total Course Fees</h3>
-<strong id="totalFees">₹0</strong>
-</div>
-<div class="fees-summary-card">
-<h3>Total Paid</h3>
-<strong id="totalPaid">₹0</strong>
-</div>
-<div class="fees-summary-card">
-<h3>Outstanding Balance</h3>
-<strong id="totalBalance">₹0</strong>
-</div>
+<p id="studentInfo">Loading student information...</p><section class="fees-summary">
+<div class="fees-summary-card"><h3>Total Course Fees</h3><strong id="totalFees">₹0</strong></div>
+<div class="fees-summary-card"><h3>Total Paid</h3><strong id="totalPaid">₹0</strong></div>
+<div class="fees-summary-card"><h3>Outstanding Balance</h3><strong id="totalBalance">₹0</strong></div>
 </section><section class="fees-table-container">
 <h2>Fee Details</h2>
 <table class="fees-table">
-<thead>
-<tr>
-<th>College Year</th>
-<th>Total Fees</th>
-<th>Amount Paid</th>
-<th>Balance</th>
-<th>Payment Status</th>
-</tr>
-</thead>
-<tbody id="feesTableBody">
-<tr><td colspan="5">Loading fee records...</td></tr>
-</tbody>
+<thead><tr><th>College Year</th><th>Total Fees</th><th>Amount Paid</th><th>Balance</th><th>Payment Status</th></tr></thead>
+<tbody id="feesTableBody"><tr><td colspan="5">Loading...</td></tr></tbody>
 </table>
-</section><section class="payment-section">
+</section><section class="payment-box">
 <h2>Pay Hostel Fees</h2>
-<p>Choose your preferred payment method.</p><label for="paymentAmount">Amount (₹):</label>
+<p>Select a payment method and enter the amount.</p><label for="paymentAmount">Payment Amount (₹)</label>
 <input id="paymentAmount" type="number" min="1" step="1" placeholder="Enter amount">
 
 <div class="payment-options">
-<button type="button" class="payment-option selected" data-method="Card">💳 Card</button>
+<button type="button" class="payment-option selected" data-method="Card">💳 Debit/Credit Card</button>
 <button type="button" class="payment-option" data-method="Google Pay">Google Pay</button>
 <button type="button" class="payment-option" data-method="Paytm">Paytm</button>
 <button type="button" class="payment-option" data-method="BHIM UPI">BHIM UPI</button>
-</div><button type="button" class="pay-button" id="payButton">Continue to Payment</button>
+</div><div id="cardFields">
+<div class="payment-grid">
+<div><label for="cardName">Cardholder Name</label><input id="cardName" autocomplete="cc-name" placeholder="Name on card"></div>
+<div><label for="cardNumber">Card Number</label><input id="cardNumber" inputmode="numeric" autocomplete="cc-number" maxlength="19" placeholder="Enter card number"></div>
+<div><label for="expiry">Expiry Date</label><input id="expiry" autocomplete="cc-exp" placeholder="MM/YY" maxlength="5></div>
+<div><label for="cvv">CVV</label><input id="cvv" type="password" inputmode="numeric" autocomplete="off" maxlength="4" placeholder="CVV"></div>
+</div>
+</div><div id="upiFields" class="hidden">
+<label for="upiId">UPI ID</label>
+<input id="upiId" placeholder="example@upi" autocomplete="off">
+<p>Open your selected UPI app to complete a real payment. This page cannot verify a transfer by itself.</p>
+</div><button type="button" class="pay-button" id="payButton">Continue</button>
 
 <p id="paymentMessage" role="status"></p>
-<p><small>Payments are processed only through a configured payment gateway. Never share your card PIN or UPI PIN on this page.</small></p>
 </section>
 </main><script>
 const API_BASE = "https://hostel-management-system-api-426c.onrender.com";
 let selectedMethod = "Card";
 let currentStudent = null;
-let outstandingBalance = 0;
+let feeTotal = 0;
+let feePaid = 0;
+let feeBalance = 0;
 
-function getStudent() {
-    for (const store of [sessionStorage, localStorage]) {
-        for (const key of ["loggedInStudent", "currentUser", "student"]) {
-            try {
-                const value = JSON.parse(store.getItem(key) || "null");
-                if (value && typeof value === "object") return value;
-            } catch (_) {}
+function getStudent(){
+    for(const store of [sessionStorage,localStorage]){
+        for(const key of ["loggedInStudent","currentUser","student"]){
+            try{
+                const s=JSON.parse(store.getItem(key)||"null");
+                if(s && typeof s==="object") return s;
+            }catch(e){}
         }
     }
     return null;
 }
 
-function getToken() {
-    for (const key of ["studentToken", "student_token", "token", "authToken", "access_token"]) {
-        const value = sessionStorage.getItem(key) || localStorage.getItem(key);
-        if (value) return value;
-    }
-    return "";
-}
+function money(n){return "₹"+Number(n||0).toLocaleString("en-IN");}
+function ordinal(n){return n===1?"st":n===2?"nd":n===3?"rd":"th";}
+function safe(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 
-function rupees(amount) {
-    return "₹" + Number(amount || 0).toLocaleString("en-IN");
-}
+async function loadFees(){
+    currentStudent=getStudent();
+    const body=document.getElementById("feesTableBody");
+    const info=document.getElementById("studentInfo");
 
-function ordinal(year) {
-    return year === 1 ? "st" : year === 2 ? "nd" : year === 3 ? "rd" : "th";
-}
-
-function escapeHTML(value) {
-    return String(value ?? "").replace(/[&<>"']/g, c => ({
-        "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
-    })[c]);
-}
-
-async function loadFees() {
-    const info = document.getElementById("studentInfo");
-    const body = document.getElementById("feesTableBody");
-    currentStudent = getStudent();
-
-    if (!currentStudent) {
-        info.textContent = "Please log in to view your fee details.";
-        body.innerHTML = '<tr><td colspan="5">Student information is unavailable. Log in again.</td></tr>';
+    if(!currentStudent){
+        info.textContent="Please log in to view your fee details.";
+        body.innerHTML='<tr><td colspan="5">Student information unavailable. Please log in again.</td></tr>';
         return;
     }
 
-    const studentId = currentStudent.student_id || currentStudent.studentId || currentStudent.id || "";
-    const name = currentStudent.name || currentStudent.student_name || "-";
-    const yearMatch = String(currentStudent.year || currentStudent.academic_year || "").match(/\d+/);
-    const currentYear = yearMatch ? Number(yearMatch[0]) : 0;
+    const studentId=currentStudent.student_id||currentStudent.studentId||"";
+    const yearMatch=String(currentStudent.year||currentStudent.academic_year||"").match(/\d+/);
+    const year=yearMatch?Number(yearMatch[0]):1;
+    info.textContent=`Student: ${currentStudent.name||"-"} | Student ID: ${studentId||"-"} | College Year: ${currentStudent.year||"-"}`;
 
-    info.textContent = `Student: ${name} | Student ID: ${studentId || "-"} | College Year: ${currentStudent.year || currentStudent.academic_year || "-"}`;
-
-    if (!studentId) {
-        body.innerHTML = '<tr><td colspan="5">Student ID missing. Please log in again.</td></tr>';
+    if(!studentId){
+        body.innerHTML='<tr><td colspan="5">Student ID is missing. Please log in again.</td></tr>';
         return;
     }
 
-    try {
-        const response = await fetch(API_BASE + "/api/fees?student_id=" + encodeURIComponent(studentId), {
-            headers: getToken() ? {"Authorization": "Bearer " + getToken()} : {}
-        });
-        const data = await response.json();
+    try{
+        const response=await fetch(API_BASE+"/api/fees?student_id="+encodeURIComponent(studentId));
+        const data=await response.json();
+        if(!response.ok) throw new Error(data.error||data.message||"Unable to load fees.");
 
-        if (!response.ok) throw new Error(data.error || data.message || "Unable to load fees.");
+        const fee=Array.isArray(data)?data[0]:(data.fees||data.record||data);
+        if(!fee||Array.isArray(fee)) throw new Error("No fee record was returned.");
 
-        const fee = Array.isArray(data) ? data[0] : (data.fees || data.record || data);
-        if (!fee || Array.isArray(fee)) throw new Error("No fee record returned by the server.");
+        feeTotal=Number(fee.total_amount??fee.total??0);
+        feePaid=Number(fee.paid_amount??fee.paid??0);
+        feeBalance=Math.max(0,feeTotal-feePaid);
 
-        const total = Number(fee.total_amount ?? fee.total ?? 0);
-        const paid = Number(fee.paid_amount ?? fee.paid ?? 0);
-        outstandingBalance = Math.max(0, total - paid);
+        document.getElementById("totalFees").textContent=money(feeTotal);
+        document.getElementById("totalPaid").textContent=money(feePaid);
+        document.getElementById("totalBalance").textContent=money(feeBalance);
+        document.getElementById("paymentAmount").value=feeBalance||"";
 
-        document.getElementById("totalFees").textContent = rupees(total);
-        document.getElementById("totalPaid").textContent = rupees(paid);
-        document.getElementById("totalBalance").textContent = rupees(outstandingBalance);
-        document.getElementById("paymentAmount").value = outstandingBalance || "";
-
-        const feeYear = Number(fee.year || currentYear || 1);
-        body.innerHTML = `
-            <tr>
-                <td>${feeYear}${ordinal(feeYear)} Year</td>
-                <td>${rupees(total)}</td>
-                <td>${rupees(paid)}</td>
-                <td>${rupees(outstandingBalance)}</td>
-                <td>${outstandingBalance === 0 ? "Fully Paid" : paid > 0 ? "Partially Paid" : "Pending"}</td>
-            </tr>`;
-    } catch (error) {
-        body.innerHTML = `<tr><td colspan="5">${escapeHTML(error.message)} Please contact the hostel office if this continues.</td></tr>`;
+        body.innerHTML=`<tr><td>${year}${ordinal(year)} Year</td><td>${money(feeTotal)}</td><td>${money(feePaid)}</td><td>${money(feeBalance)}</td><td>${feeBalance===0?"Fully Paid":feePaid>0?"Partially Paid":"Pending"}</td></tr>`;
+    }catch(error){
+        body.innerHTML=`<tr><td colspan="5">${safe(error.message)}</td></tr>`;
     }
 }
 
-document.querySelectorAll(".payment-option").forEach(button => {
-    button.addEventListener("click", () => {
-        document.querySelectorAll(".payment-option").forEach(item => item.classList.remove("selected"));
+document.querySelectorAll(".payment-option").forEach(button=>{
+    button.addEventListener("click",()=>{
+        document.querySelectorAll(".payment-option").forEach(b=>b.classList.remove("selected"));
         button.classList.add("selected");
-        selectedMethod = button.dataset.method;
+        selectedMethod=button.dataset.method;
+        document.getElementById("cardFields").classList.toggle("hidden",selectedMethod!=="Card");
+        document.getElementById("upiFields").classList.toggle("hidden",selectedMethod==="Card");
+        document.getElementById("paymentMessage").textContent="";
     });
 });
 
-document.getElementById("payButton").addEventListener("click", async () => {
-    const message = document.getElementById("paymentMessage");
-    const amount = Number(document.getElementById("paymentAmount").value);
+document.getElementById("cardNumber").addEventListener("input",e=>{
+    let value=e.target.value.replace(/\D/g,"").slice(0,16);
+    e.target.value=value.replace(/(.{4})/g,"$1 ").trim();
+});
 
-    if (!currentStudent) {
-        message.textContent = "Please log in before continuing.";
-        return;
-    }
-    if (!Number.isFinite(amount) || amount <= 0) {
-        message.textContent = "Enter a valid payment amount.";
-        return;
-    }
-    if (outstandingBalance > 0 && amount > outstandingBalance) {
-        message.textContent = "Amount cannot exceed the outstanding balance.";
+document.getElementById("expiry").addEventListener("input",e=>{
+    let value=e.target.value.replace(/\D/g,"").slice(0,4);
+    if(value.length>2)value=value.slice(0,2)+"/"+value.slice(2);
+    e.target.value=value;
+});
+
+document.getElementById("payButton").addEventListener("click",()=>{
+    const amount=Number(document.getElementById("paymentAmount").value);
+    const message=document.getElementById("paymentMessage");
+
+    if(!currentStudent){message.textContent="Please log in first.";return;}
+    if(!Number.isFinite(amount)||amount<=0){message.textContent="Enter a valid payment amount.";return;}
+    if(feeBalance<=0){message.textContent="There is no outstanding balance.";return;}
+    if(amount>feeBalance){message.textContent="Amount cannot exceed the outstanding balance.";return;}
+
+    if(selectedMethod==="Card"){
+        const name=document.getElementById("cardName").value.trim();
+        const number=document.getElementById("cardNumber").value.replace(/\D/g,"");
+        const expiry=document.getElementById("expiry").value.trim();
+        const cvv=document.getElementById("cvv").value.trim();
+
+        if(!name||number.length<12||! /^\d{2}\/\d{2}$/.test(expiry)||!/^\d{3,4}$/.test(cvv)){
+            message.textContent="Please complete all card details correctly.";
+            return;
+        }
+    }else if(!/^[\w.-]+@[\w.-]+$/.test(document.getElementById("upiId").value.trim())){
+        message.textContent="Enter a valid UPI ID.";
         return;
     }
 
     /*
-      A real payment gateway must be configured before collecting payment.
-      This page intentionally does not claim that money has been paid.
+      This interface cannot securely charge a card, launch/verify UPI,
+      or confirm a real transfer. Do not collect or store card details.
     */
-    message.textContent =
-        "Selected method: " + selectedMethod +
-        ". Online payment is not yet connected to a payment gateway. No money has been charged. Please contact the hostel office to pay securely.";
+    message.textContent="Payment method: "+selectedMethod+"\nAmount: "+money(amount)+"\nTo complete payment, use your bank or UPI app's secure payment flow. This page has not charged you or marked the fee as paid.";
 });
 
 loadFees();
