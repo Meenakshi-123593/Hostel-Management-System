@@ -10,7 +10,7 @@ app = Flask(name)
 BASE_DIR = os.path.dirname(os.path.abspath(file))
 DATABASE = os.path.join(BASE_DIR, "hostel.db")
 
-==================== CORS ====================
+#==================== CORS ====================
 
 @app.after_request
 def add_cors_headers(response):
@@ -29,7 +29,7 @@ response.headers["Access-Control-Allow-Methods"] = (
 
 return response
 
-==================== DATABASE ====================
+#==================== DATABASE ====================
 
 def get_db():
 connection = sqlite3.connect(DATABASE)
@@ -119,7 +119,7 @@ try:
 finally:
     connection.close()
 
-==================== HELPERS ====================
+#==================== HELPERS ====================
 
 def get_serializer():
 secret = os.environ.get("ADMIN_TOKEN_SECRET")
@@ -202,7 +202,7 @@ return jsonify({
 "message": "Registered student not found."
 }), 404
 
-==================== HOME ====================
+#==================== HOME ====================
 
 @app.route("/", methods=["GET"])
 def home():
@@ -284,7 +284,7 @@ except sqlite3.Error:
 finally:
     connection.close()
 
-==================== STUDENT LOGIN ====================
+#==================== STUDENT LOGIN ====================
 
 @app.route("/api/login", methods=["POST", "OPTIONS"])
 def login():
@@ -344,7 +344,7 @@ except sqlite3.Error:
 finally:
     connection.close()
 
-==================== ADMIN LOGIN ====================
+#==================== ADMIN LOGIN ====================
 
 @app.route("/api/admin/login", methods=["POST", "OPTIONS"])
 def admin_login():
@@ -389,7 +389,7 @@ return jsonify({
     "token": token
 }), 200
 
-==================== ADMIN: STUDENTS ====================
+#==================== ADMIN: STUDENTS ====================
 
 @app.route("/api/admin/students", methods=["GET", "OPTIONS"])
 @admin_required
@@ -422,7 +422,7 @@ except sqlite3.Error:
 finally:
     connection.close()
 
-==================== STUDENT: SUBMIT OUTPASS ====================
+#==================== STUDENT: SUBMIT OUTPASS ====================
 
 @app.route("/api/outpasses", methods=["GET", "POST", "OPTIONS"])
 def outpasses():
@@ -492,7 +492,7 @@ try:
 finally:
     connection.close()
 
-==================== ADMIN: OUTPASSES ====================
+#==================== ADMIN: OUTPASSES ====================
 
 @app.route("/api/admin/outpasses", methods=["GET", "OPTIONS"])
 @admin_required
@@ -550,7 +550,7 @@ try:
 finally:
     connection.close()
 
-==================== STUDENT: COMPLAINTS ====================
+#==================== STUDENT: COMPLAINTS ====================
 
 @app.route("/api/complaints", methods=["GET", "POST", "OPTIONS"])
 def complaints():
@@ -619,7 +619,7 @@ try:
 finally:
     connection.close()
 
-==================== ADMIN: COMPLAINTS ====================
+#==================== ADMIN: COMPLAINTS ====================
 
 @app.route("/api/admin/complaints", methods=["GET", "OPTIONS"])
 @admin_required
@@ -676,7 +676,7 @@ try:
 finally:
     connection.close()
 
-==================== ATTENDANCE ====================
+#==================== ATTENDANCE ====================
 
 @app.route("/api/attendance", methods=["GET", "OPTIONS"])
 def student_attendance():
@@ -779,7 +779,7 @@ try:
 finally:
     connection.close()
 
-==================== FEES ====================
+#==================== FEES ====================
 
 @app.route("/api/fees", methods=["GET", "OPTIONS"])
 def student_fees():
@@ -923,7 +923,7 @@ try:
 finally:
     connection.close()
 
-==================== ADMIN DASHBOARD ====================
+#==================== ADMIN DASHBOARD ====================
 
 @app.route("/api/admin/dashboard", methods=["GET", "OPTIONS"])
 @admin_required
@@ -1012,7 +1012,7 @@ try:
 finally:
     connection.close()
 
-==================== START APPLICATION ====================
+#==================== START APPLICATION ====================
 
 create_table()
 
