@@ -1,274 +1,727 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Login | NGI Hostel Management System</title>
+import os
+import sqlite3
+from datetime import datetime, timedelta, timezone
+from functools import wraps
 
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+from werkzeug.security import generate_password_hash, check_password_hash
+
+app = Flask(__name__)
+
+# CORS: allow requests from your deployed frontend
+CORS(
+    app,
+    resources={r"/api/*": {"origins": "*"}},
+    allow_headers=["Content-Type", "Authorization"],
+    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+)
+
+DATABASE = os.path.join(os.path.dirname(__file__), "hostel.db")
+
+
+# ---------------- DATABASE ----------------
+
+def get_db():
+    connection = sqlite3.connect(DATABASE)
+    connection.row_factory = sqlite3.Row
+    return connection
+
+
+def create_table():
+    with get_db() as db:
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS students (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                email TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                phone TEXT,
+                dob TEXT,
+                department TEXT,
+                year TEXT,
+                academic_year TEXT,
+                room_number TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS outpasses (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                student_id INTEGER NOT NULL,
+                reason TEXT,
+                from_date TEXT,
+                to_date TEXT,
+                status TEXT DEFAULT 'Pending',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS complaints (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                student_id INTEGER NOT NULL,
+                complaint TEXT NOT NULL,
+                status TEXT DEFAULT 'Pending',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS attendance (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                student_id INTEGER NOT NULL,
+                date TEXT NOT NULL,
+                status TEXT DEFAULT 'Present'
+            )
+        """)
+
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS fees (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                student_id INTEGER NOT NULL,
+                amount REAL DEFAULT 0,
+                status TEXT DEFAULT 'Pending',
+                due_date TEXT
+            )
+        """)
+
+
+create_table()
+
+
+# ---------------- ADMIN AUTHENTICATION ----------------
+
+def get_serializer():
+    secret = os.environ.get("ADMIN_TOKEN_SECRET")
+
+    if not secret:
+        raise RuntimeError("ADMIN_TOKEN_SECRET is not configured")
+
+    return URLSafeTimedSerializer(
+        secret,
+        salt="hostel-admin-auth"
+    )
+
+
+def require_admin(function):
+    @wraps(function)
+    def wrapper(*args, **kwargs):
+        authorization = request.headers.get("Authorization", "")
+
+        if not authorization.startswith("Bearer "):
+            return jsonify({
+                "success": False,
+                "message": "Admin authentication required"
+            }), 401
+
+        token = authorization.split(" ", 1)[1]
+
+        try:
+            data = get_serializer().loads(token, max_age=3600)
+
+            if data.get("role") != "admin":
+                raise BadSignature("Invalid role")
+
+        except (BadSignature, SignatureExpired):
+            return jsonify({
+                "success": False,
+                "message": "Invalid or expired admin token"
+            }), 401
+        except RuntimeError as error:
+            return jsonify({
+                "success": False,
+                "message": str(error)
+            }), 500
+
+        return function(*args, **kwargs)
+
+    return wrapper
+
+
+# ---------------- HOME / HEALTH CHECK ----------------
+
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({
+        "message": "Nehru Group of Institutions Hostel Management System",
+        "status": "Backend is running successfully"
+    }), 200
+
+
+# ---------------- STUDENT REGISTRATION ----------------
+
+@app.route("/api/register", methods=["POST"])
+def register():
+    data = request.get_json(silent=True) or {}
+
+    name = str(data.get("name", "")).strip()
+    email = str(data.get("email", "")).strip().lower()
+    password = str(data.get("password", ""))
+
+    if not name or not email or not password:
+        return jsonify({
+            "success": False,
+            "message": "Name, email and password are required"
+        }), 400
+
+    hashed_password = generate_password_hash(password)
+
+    try:
+        with get_db() as db:
+            cursor = db.execute("""
+                INSERT INTO students
+                (name, email, password, phone, dob, department,
+                 year, academic_year, room_number)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                name,
+                email,
+                hashed_password,
+                data.get("phone"),
+                data.get("dob"),
+                data.get("department"),
+                data.get("year"),
+                data.get("academic_year"),
+                data.get("room_number")
+            ))
+
+            student_id = cursor.lastrowid
+
+        return jsonify({
+            "success": True,
+            "message": "Registration successful",
+            "student_id": student_id
+        }), 201
+
+    except sqlite3.IntegrityError:
+        return jsonify({
+            "success": False,
+            "message": "Email already registered"
+        }), 409
+    except sqlite3.Error:
+        app.logger.exception("Student registration failed")
+        return jsonify({
+            "success": False,
+            "message": "Database error during registration"
+        }), 500
+
+
+# ---------------- STUDENT LOGIN ----------------
+
+@app.route("/api/login", methods=["POST"])
+def student_login():
+    data = request.get_json(silent=True) or {}
+
+    email = str(data.get("email", "")).strip().lower()
+    password = str(data.get("password", ""))
+
+    with get_db() as db:
+        student = db.execute(
+            "SELECT * FROM students WHERE email = ?",
+            (email,)
+        ).fetchone()
+
+    if not student or not check_password_hash(
+        student["password"], password
+    ):
+        return jsonify({
+            "success": False,
+            "message": "Invalid email or password"
+        }), 401
+
+    return jsonify({
+        "success": True,
+        "message": "Login successful",
+        "student": {
+            key: student[key]
+            for key in student.keys()
+            if key != "password"
         }
+    }), 200
 
-        body {
-            font-family: Arial, Helvetica, sans-serif;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: linear-gradient(135deg, #101b3f, #263e73);
-            padding: 20px;
-        }
 
-        .login-container {
-            width: 100%;
-            max-width: 430px;
-            background: #ffffff;
-            border-radius: 16px;
-            padding: 35px;
-            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
-        }
+# ---------------- ADMIN LOGIN ----------------
 
-        .logo {
-            width: 75px;
-            height: 75px;
-            margin: 0 auto 15px;
-            border-radius: 50%;
-            background: #17264d;
-            color: #ff9f1c;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 27px;
-            font-weight: bold;
-        }
+@app.route("/api/admin/login", methods=["POST"])
+def admin_login():
+    data = request.get_json(silent=True) or {}
 
-        h1 {
-            text-align: center;
-            color: #17264d;
-            font-size: 25px;
-            margin-bottom: 8px;
-        }
+    configured_username = os.environ.get("ADMIN_USERNAME")
+    configured_password = os.environ.get("ADMIN_PASSWORD")
+    secret = os.environ.get("ADMIN_TOKEN_SECRET")
 
-        .subtitle {
-            text-align: center;
-            color: #687086;
-            font-size: 14px;
-            margin-bottom: 28px;
-            line-height: 1.5;
-        }
+    if not configured_username or not configured_password or not secret:
+        return jsonify({
+            "success": False,
+            "message": "Admin authentication is not configured in Render"
+        }), 500
 
-        label {
-            display: block;
-            margin: 16px 0 7px;
-            color: #252d42;
-            font-weight: bold;
-            font-size: 14px;
-        }
+    username = str(data.get("username", "")).strip()
+    password = str(data.get("password", ""))
 
-        input {
-            width: 100%;
-            padding: 13px;
-            border: 1px solid #ccd2df;
-            border-radius: 8px;
-            font-size: 15px;
-            outline: none;
-        }
+    if (
+        username != configured_username
+        or password != configured_password
+    ):
+        return jsonify({
+            "success": False,
+            "message": "Invalid username or password"
+        }), 401
 
-        input:focus {
-            border-color: #263e73;
-            box-shadow: 0 0 0 3px rgba(38, 62, 115, 0.12);
-        }
+    token = get_serializer().dumps({
+        "username": username,
+        "role": "admin"
+    })
 
-        button {
-            width: 100%;
-            margin-top: 24px;
-            padding: 14px;
-            border: none;
-            border-radius: 8px;
-            background: #17264d;
-            color: white;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-        }
+    return jsonify({
+        "success": True,
+        "message": "Admin login successful",
+        "token": token
+    }), 200
 
-        button:hover {
-            background: #263e73;
-        }
 
-        button:disabled {
-            opacity: 0.65;
-            cursor: not-allowed;
-        }
+# ---------------- ADMIN: STUDENT RECORDS ----------------
 
-        #message {
-            display: none;
-            margin-top: 16px;
-            padding: 12px;
-            border-radius: 7px;
-            font-size: 14px;
-            line-height: 1.5;
-        }
+@app.route("/api/admin/students", methods=["GET"])
+@require_admin
+def admin_students():
+    with get_db() as db:
+        students = db.execute("""
+            SELECT id, name, email, phone, dob, department,
+                   year, academic_year, room_number, created_at
+            FROM students
+            ORDER BY id DESC
+        """).fetchall()
 
-        .error {
-            display: block !important;
-            color: #9d1c1c;
-            background: #fff0f0;
-        }
+    return jsonify({
+        "success": True,
+        "students": [dict(row) for row in students]
+    }), 200
 
-        .success {
-            display: block !important;
-            color: #176b36;
-            background: #eaf8ee;
-        }
 
-        .back-link {
-            display: block;
-            text-align: center;
-            margin-top: 22px;
-            color: #263e73;
-            text-decoration: none;
-            font-size: 14px;
-        }
+# ---------------- STUDENT: OUTPASS ----------------
 
-        .back-link:hover {
-            text-decoration: underline;
-        }
+@app.route("/api/outpasses", methods=["GET", "POST"])
+def student_outpasses():
+    if request.method == "POST":
+        data = request.get_json(silent=True) or {}
 
-        .security-note {
-            text-align: center;
-            margin-top: 20px;
-            color: #7b8292;
-            font-size: 12px;
-        }
-    </style>
-</head>
+        try:
+            student_id = int(data.get("student_id"))
+        except (TypeError, ValueError):
+            return jsonify({
+                "success": False,
+                "message": "Valid student_id is required"
+            }), 400
 
-<body>
-    <main class="login-container">
-        <div class="logo">NGI</div>
+        with get_db() as db:
+            student = db.execute(
+                "SELECT id FROM students WHERE id = ?",
+                (student_id,)
+            ).fetchone()
 
-        <h1>Admin Login</h1>
+            if not student:
+                return jsonify({
+                    "success": False,
+                    "message": "Student not found"
+                }), 404
 
-        <p class="subtitle">
-            Nehru Group of Institutions<br>
-            Hostel Management System
-        </p>
+            cursor = db.execute("""
+                INSERT INTO outpasses
+                (student_id, reason, from_date, to_date)
+                VALUES (?, ?, ?, ?)
+            """, (
+                student_id,
+                data.get("reason"),
+                data.get("from_date"),
+                data.get("to_date")
+            ))
 
-        <form id="adminLoginForm">
-            <label for="username">Admin Username</label>
-            <input
-                type="text"
-                id="username"
-                name="username"
-                placeholder="Enter admin username"
-                autocomplete="username"
-                required
-            >
+        return jsonify({
+            "success": True,
+            "message": "Outpass request submitted",
+            "id": cursor.lastrowid
+        }), 201
 
-            <label for="password">Admin Password</label>
-            <input
-                type="password"
-                id="password"
-                name="password"
-                placeholder="Enter admin password"
-                autocomplete="current-password"
-                required
-            >
+    student_id = request.args.get("student_id")
 
-            <button type="submit" id="loginButton">
-                Login to Admin Portal
-            </button>
+    if not student_id:
+        return jsonify({
+            "success": False,
+            "message": "student_id is required"
+        }), 400
 
-            <div id="message" role="alert"></div>
-        </form>
+    with get_db() as db:
+        rows = db.execute(
+            "SELECT * FROM outpasses WHERE student_id = ? ORDER BY id DESC",
+            (student_id,)
+        ).fetchall()
 
-        <a href="index.html" class="back-link">
-            ← Back to Home
-        </a>
+    return jsonify({
+        "success": True,
+        "outpasses": [dict(row) for row in rows]
+    }), 200
 
-        <p class="security-note">
-            Authorized administrators only.
-        </p>
-    </main>
 
-    <script>
-        const API_BASE =
-            "https://hostel-management-system-api-426c.onrender.com";
+# ---------------- ADMIN: OUTPASSES ----------------
 
-        const form = document.getElementById("adminLoginForm");
-        const message = document.getElementById("message");
-        const button = document.getElementById("loginButton");
+@app.route("/api/admin/outpasses", methods=["GET"])
+@require_admin
+def admin_outpasses():
+    with get_db() as db:
+        rows = db.execute("""
+            SELECT o.*, s.name AS student_name, s.email
+            FROM outpasses o
+            JOIN students s ON s.id = o.student_id
+            ORDER BY o.id DESC
+        """).fetchall()
 
-        form.addEventListener("submit", async function (event) {
-            event.preventDefault();
+    return jsonify({
+        "success": True,
+        "outpasses": [dict(row) for row in rows]
+    }), 200
 
-            message.className = "";
-            message.textContent = "";
-            button.disabled = true;
-            button.textContent = "Signing in...";
 
-            const username =
-                document.getElementById("username").value.trim();
+@app.route("/api/admin/outpasses/<int:outpass_id>", methods=["PUT"])
+@require_admin
+def update_outpass(outpass_id):
+    data = request.get_json(silent=True) or {}
+    status = data.get("status")
 
-            const password =
-                document.getElementById("password").value;
+    if status not in ("Approved", "Rejected", "Pending"):
+        return jsonify({
+            "success": False,
+            "message": "Invalid status"
+        }), 400
 
-            try {
-                const response = await fetch(
-                    API_BASE + "/api/admin/login",
-                    {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json"
-                        },
-                        body: JSON.stringify({
-                            username: username,
-                            password: password
-                        })
-                    }
-                );
+    with get_db() as db:
+        cursor = db.execute(
+            "UPDATE outpasses SET status = ? WHERE id = ?",
+            (status, outpass_id)
+        )
 
-                const result = await response.json();
+    if cursor.rowcount == 0:
+        return jsonify({
+            "success": False,
+            "message": "Outpass not found"
+        }), 404
 
-                if (!response.ok || result.success !== true) {
-                    throw new Error(
-                        result.message || result.error ||
-                        "Admin login failed. Check your credentials."
-                    );
-                }
+    return jsonify({
+        "success": True,
+        "message": "Outpass status updated"
+    }), 200
 
-                const token = result.token || result.access_token;
 
-                if (!token) {
-                    throw new Error(
-                        "The backend did not return an admin token. " +
-                        "Check the Flask admin-login API."
-                    );
-                }
+# ---------------- STUDENT: COMPLAINTS ----------------
 
-                sessionStorage.setItem("adminToken", token);
-                sessionStorage.setItem("adminUsername", username);
+@app.route("/api/complaints", methods=["GET", "POST"])
+def student_complaints():
+    if request.method == "POST":
+        data = request.get_json(silent=True) or {}
 
-                message.textContent = "Login successful. Opening dashboard...";
-                message.className = "success";
+        try:
+            student_id = int(data.get("student_id"))
+        except (TypeError, ValueError):
+            return jsonify({
+                "success": False,
+                "message": "Valid student_id is required"
+            }), 400
 
-                window.location.href = "admin.html";
+        complaint = str(data.get("complaint", "")).strip()
 
-            } catch (error) {
-                message.textContent =
-                    error.message ||
-                    "Cannot connect to the server. Please try again.";
+        if not complaint:
+            return jsonify({
+                "success": False,
+                "message": "Complaint is required"
+            }), 400
 
-                message.className = "error";
-            } finally {
-                button.disabled = false;
-                button.textContent = "Login to Admin Portal";
-            }
-        });
-    </script>
-</body>
-</html>
+        with get_db() as db:
+            cursor = db.execute("""
+                INSERT INTO complaints (student_id, complaint)
+                VALUES (?, ?)
+            """, (student_id, complaint))
+
+        return jsonify({
+            "success": True,
+            "message": "Complaint submitted",
+            "id": cursor.lastrowid
+        }), 201
+
+    student_id = request.args.get("student_id")
+
+    if not student_id:
+        return jsonify({
+            "success": False,
+            "message": "student_id is required"
+        }), 400
+
+    with get_db() as db:
+        rows = db.execute(
+            "SELECT * FROM complaints WHERE student_id = ? ORDER BY id DESC",
+            (student_id,)
+        ).fetchall()
+
+    return jsonify({
+        "success": True,
+        "complaints": [dict(row) for row in rows]
+    }), 200
+
+
+# ---------------- ADMIN: COMPLAINTS ----------------
+
+@app.route("/api/admin/complaints", methods=["GET"])
+@require_admin
+def admin_complaints():
+    with get_db() as db:
+        rows = db.execute("""
+            SELECT c.*, s.name AS student_name, s.email
+            FROM complaints c
+            JOIN students s ON s.id = c.student_id
+            ORDER BY c.id DESC
+        """).fetchall()
+
+    return jsonify({
+        "success": True,
+        "complaints": [dict(row) for row in rows]
+    }), 200
+
+
+@app.route("/api/admin/complaints/<int:complaint_id>", methods=["PUT"])
+@require_admin
+def update_complaint(complaint_id):
+    data = request.get_json(silent=True) or {}
+    status = data.get("status")
+
+    if status not in ("Pending", "Resolved", "Rejected"):
+        return jsonify({
+            "success": False,
+            "message": "Invalid status"
+        }), 400
+
+    with get_db() as db:
+        cursor = db.execute(
+            "UPDATE complaints SET status = ? WHERE id = ?",
+            (status, complaint_id)
+        )
+
+    if cursor.rowcount == 0:
+        return jsonify({
+            "success": False,
+            "message": "Complaint not found"
+        }), 404
+
+    return jsonify({
+        "success": True,
+        "message": "Complaint status updated"
+    }), 200
+
+
+# ---------------- STUDENT: ATTENDANCE ----------------
+
+@app.route("/api/attendance", methods=["GET"])
+def student_attendance():
+    student_id = request.args.get("student_id")
+
+    if not student_id:
+        return jsonify({
+            "success": False,
+            "message": "student_id is required"
+        }), 400
+
+    with get_db() as db:
+        rows = db.execute(
+            "SELECT * FROM attendance WHERE student_id = ? ORDER BY date DESC",
+            (student_id,)
+        ).fetchall()
+
+    return jsonify({
+        "success": True,
+        "attendance": [dict(row) for row in rows]
+    }), 200
+
+
+# ---------------- ADMIN: ATTENDANCE ----------------
+
+@app.route("/api/admin/attendance", methods=["GET", "POST"])
+@require_admin
+def admin_attendance():
+    if request.method == "POST":
+        data = request.get_json(silent=True) or {}
+
+        try:
+            student_id = int(data.get("student_id"))
+        except (TypeError, ValueError):
+            return jsonify({
+                "success": False,
+                "message": "Valid student_id is required"
+            }), 400
+
+        date = data.get("date") or datetime.now().date().isoformat()
+        status = data.get("status", "Present")
+
+        if status not in ("Present", "Absent", "Leave"):
+            return jsonify({
+                "success": False,
+                "message": "Invalid attendance status"
+            }), 400
+
+        with get_db() as db:
+            cursor = db.execute("""
+                INSERT INTO attendance (student_id, date, status)
+                VALUES (?, ?, ?)
+            """, (student_id, date, status))
+
+        return jsonify({
+            "success": True,
+            "message": "Attendance saved",
+            "id": cursor.lastrowid
+        }), 201
+
+    with get_db() as db:
+        rows = db.execute("""
+            SELECT a.*, s.name AS student_name
+            FROM attendance a
+            JOIN students s ON s.id = a.student_id
+            ORDER BY a.date DESC
+        """).fetchall()
+
+    return jsonify({
+        "success": True,
+        "attendance": [dict(row) for row in rows]
+    }), 200
+
+
+# ---------------- STUDENT: FEES ----------------
+
+@app.route("/api/fees", methods=["GET"])
+def student_fees():
+    student_id = request.args.get("student_id")
+
+    if not student_id:
+        return jsonify({
+            "success": False,
+            "message": "student_id is required"
+        }), 400
+
+    with get_db() as db:
+        rows = db.execute(
+            "SELECT * FROM fees WHERE student_id = ? ORDER BY id DESC",
+            (student_id,)
+        ).fetchall()
+
+    return jsonify({
+        "success": True,
+        "fees": [dict(row) for row in rows]
+    }), 200
+
+
+# ---------------- ADMIN: FEES ----------------
+
+@app.route("/api/admin/fees", methods=["GET", "POST"])
+@require_admin
+def admin_fees():
+    if request.method == "POST":
+        data = request.get_json(silent=True) or {}
+
+        try:
+            student_id = int(data.get("student_id"))
+            amount = float(data.get("amount", 0))
+        except (TypeError, ValueError):
+            return jsonify({
+                "success": False,
+                "message": "Valid student_id and amount are required"
+            }), 400
+
+        status = data.get("status", "Pending")
+
+        if status not in ("Pending", "Paid", "Overdue"):
+            return jsonify({
+                "success": False,
+                "message": "Invalid fee status"
+            }), 400
+
+        with get_db() as db:
+            cursor = db.execute("""
+                INSERT INTO fees (student_id, amount, status, due_date)
+                VALUES (?, ?, ?, ?)
+            """, (
+                student_id,
+                amount,
+                status,
+                data.get("due_date")
+            ))
+
+        return jsonify({
+            "success": True,
+            "message": "Fee record saved",
+            "id": cursor.lastrowid
+        }), 201
+
+    with get_db() as db:
+        rows = db.execute("""
+            SELECT f.*, s.name AS student_name
+            FROM fees f
+            JOIN students s ON s.id = f.student_id
+            ORDER BY f.id DESC
+        """).fetchall()
+
+    return jsonify({
+        "success": True,
+        "fees": [dict(row) for row in rows]
+    }), 200
+
+
+# ---------------- ADMIN DASHBOARD SUMMARY ----------------
+
+@app.route("/api/admin/dashboard", methods=["GET"])
+@require_admin
+def admin_dashboard():
+    with get_db() as db:
+        students = db.execute(
+            "SELECT COUNT(*) FROM students"
+        ).fetchone()[0]
+
+        pending_outpasses = db.execute(
+            "SELECT COUNT(*) FROM outpasses WHERE status = 'Pending'"
+        ).fetchone()[0]
+
+        pending_complaints = db.execute(
+            "SELECT COUNT(*) FROM complaints WHERE status = 'Pending'"
+        ).fetchone()[0]
+
+    return jsonify({
+        "success": True,
+        "total_students": students,
+        "pending_outpasses": pending_outpasses,
+        "pending_complaints": pending_complaints
+    }), 200
+
+
+# ---------------- ERROR HANDLING ----------------
+
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({
+        "success": False,
+        "message": "API endpoint not found"
+    }), 404
+
+
+@app.errorhandler(500)
+def internal_error(error):
+    app.logger.exception("Internal server error")
+    return jsonify({
+        "success": False,
+        "message": "Internal server error"
+    }), 500
+
+
+if __name__ == "__main__":
+    app.run(
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 5000)),
+        debug=False
+    )
