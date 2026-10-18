@@ -1,11 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Student Dashboard | NGI Hostel Management System</title>
-
-<style>
+<title>Student Dashboard | NGI Hostel Management System</title><style>
 *{box-sizing:border-box}
 body{
     margin:0;
@@ -68,80 +65,63 @@ header button{
 .card p{color:#666;line-height:1.5;margin:0 0 15px}
 .card span{color:#4548a8;font-weight:bold}
 footer{text-align:center;padding:25px;color:#777}
-</style>
-</head>
-
-<body>
+</style></head><body>
 <header>
     <h2>NGI Hostel Management System</h2>
     <button onclick="logout()">Logout</button>
-</header>
-
-<main class="container">
+</header><main class="container">
     <section class="welcome">
         <h1 id="welcomeText">Welcome, Student!</h1>
         <p>Select an option below to manage your hostel information.</p>
-    </section>
+    </section><section class="dashboard">
 
-    <section class="dashboard">
+    <a class="card" href="profile.html">
+        <div class="icon">👤</div>
+        <h3>My Profile</h3>
+        <p>View your personal and student details.</p>
+        <span>View Profile →</span>
+    </a>
 
-        <a class="card" href="profile.html">
-            <div class="icon">👤</div>
-            <h3>My Profile</h3>
-            <p>View your personal and student details.</p>
-            <span>View Profile →</span>
-        </a>
+    <a class="card" href="room.html">
+        <div class="icon">🛏️</div>
+        <h3>Room Details</h3>
+        <p>View your room allocation and room information.</p>
+        <span>View Rooms →</span>
+    </a>
 
-        <a class="card" href="room.html">
-            <div class="icon">🛏️</div>
-            <h3>Room Details</h3>
-            <p>View your room allocation and room information.</p>
-            <span>View Rooms →</span>
-        </a>
+    <a class="card" href="attendance.html">
+        <div class="icon">📅</div>
+        <h3>Attendance</h3>
+        <p>View your recorded attendance.</p>
+        <span>View Attendance →</span>
+    </a>
 
-        <a class="card" href="attendance.html">
-            <div class="icon">📅</div>
-            <h3>Attendance</h3>
-            <p>View your recorded attendance.</p>
-            <span>View Attendance →</span>
-        </a>
+    <a class="card" href="food.html">
+        <div class="icon">🍽️</div>
+        <h3>Food Menu</h3>
+        <p>Check the hostel's daily meal menu.</p>
+        <span>View Menu →</span>
+    </a>
 
-        <a class="card" href="food.html">
-            <div class="icon">🍽️</div>
-            <h3>Food Menu</h3>
-            <p>Check the hostel's daily meal menu.</p>
-            <span>View Menu →</span>
-        </a>
+    <a class="card" href="outpass.html">
+        <div class="icon">📝</div>
+        <h3>Outpass</h3>
+        <p>Submit an application and check its status.</p>
+        <span>Manage Outpass →</span>
+    </a>
 
-        <a class="card" href="outpass.html">
-            <div class="icon">📝</div>
-            <h3>Outpass</h3>
-            <p>Submit an application and check its status.</p>
-            <span>Manage Outpass →</span>
-        </a>
+    <a class="card" href="complaint.html">
+        <div class="icon">📢</div>
+        <h3>Complaints</h3>
+        <p>Submit complaints and check their status.</p>
+        <span>Manage Complaints →</span>
+    </a>
 
-        <a class="card" href="fees.html">
-            <div class="icon">💳</div>
-            <h3>Fees</h3>
-            <p>View your hostel fee and payment information.</p>
-            <span>View Fees →</span>
-        </a>
+</section>
 
-        <a class="card" href="complaint.html">
-            <div class="icon">📢</div>
-            <h3>Complaints</h3>
-            <p>Submit complaints and check their status.</p>
-            <span>Manage Complaints →</span>
-        </a>
-
-    </section>
-</main>
-
-<footer>
+</main><footer>
     Nehru Group of Institutions · Hostel Management System
-</footer>
-
-<script>
+</footer><script>
 const studentData =
     sessionStorage.getItem("loggedInStudent") ||
     localStorage.getItem("currentUser");
@@ -164,6 +144,5 @@ function logout() {
     localStorage.removeItem("currentUser");
     window.location.href = "login.html";
 }
-</script>
-</body>
+</script></body>
 </html>
