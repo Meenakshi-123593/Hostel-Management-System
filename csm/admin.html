@@ -1,13 +1,16 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NGI Hostel - Admin Panel</title><style>
+<title>NGI Hostel - Admin Panel</title>
+<style>
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial,sans-serif;background:#f3f6fb;color:#243047}
 header{background:#173b70;color:white;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 header h1{margin:0;font-size:23px}
-button{border:0;border-radius:6px;padding:10px 14px;background:#1763c6;color:white;cursor:pointer;font-size:14px}
+button{border:0;border:6px;padding:10px 14px;background:#1763c6;color:white;cursor:pointer;font-size:14px}
 button:hover{opacity:.88}
 .logout{background:#d93636}
 .layout{display:flex;min-height:calc(100vh - 70px)}
@@ -26,7 +29,7 @@ h2{margin-top:0;color:#173b70}
 table{width:100%;border-collapse:collapse;min-width:650px}
 th,td{padding:12px;text-align:left;border-bottom:1px solid #e5eaf1;font-size:14px}
 th{background:#eaf1fb;color:#173b70}
-input,select{padding:9px;border:1px solid #cbd5e1;border-radius:5px;max-width:150px;width:100%}
+input,select{padding:10px;border:1px solid #cbd5e1;border-radius:5px;width:100%;max-width:260px;background:white}
 .small-btn{padding:7px 10px;margin:2px}
 .green{background:#16834a}
 .red{background:#c93232}
@@ -41,7 +44,9 @@ input,select{padding:9px;border:1px solid #cbd5e1;border-radius:5px;max-width:15
 #loginPanel button{width:100%;margin-top:10px}
 .hidden{display:none!important}
 .note{font-size:13px;color:#64748b;line-height:1.5}
-
+.attendance-form{display:flex;gap:12px;flex-wrap:wrap;align-items:end}
+.attendance-form label{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:bold;color:#46546b}
+.attendance-form button{height:39px}
 @media(max-width:700px){
 .layout{display:block}
 .sidebar{width:100%;display:flex;overflow-x:auto;gap:5px;padding:10px}
@@ -50,177 +55,139 @@ main{padding:14px}
 header{padding:15px}
 header h1{font-size:19px}
 }
-</style></head><body><header>
+</style>
+</head>
+<body>
+
+<header>
     <div>
         <h1>NGI Hostel Management System</h1>
         <div style="font-size:13px;margin-top:5px">Administrator Panel</div>
-    </div><div>
-    <button onclick="refreshCurrent()">Refresh</button>
-    <button class="logout" onclick="logoutAdmin()">Logout</button>
+    </div>
+    <div>
+        <button onclick="refreshCurrent()">Refresh</button>
+        <button class="logout" onclick="logoutAdmin()">Logout</button>
+    </div>
+</header>
+
+<div id="loginPanel" class="hidden">
+    <h2>Admin Login</h2>
+    <p class="note">Sign in with your administrator credentials.</p>
+    <input id="adminUsername" placeholder="Admin username" autocomplete="username">
+    <input id="adminPassword" type="password" placeholder="Admin password" autocomplete="current-password">
+    <button onclick="adminLogin()">Login</button>
+    <div id="loginMessage"></div>
 </div>
 
-</header><div id="loginPanel" class="hidden">
-    <h2>Admin Login</h2>
-    <p class="note">Sign in with your existing administrator credentials.</p><input id="adminUsername" placeholder="Admin username" autocomplete="username">
-<input id="adminPassword" type="password" placeholder="Admin password" autocomplete="current-password">
-
-<button onclick="adminLogin()">Login</button>
-<div id="loginMessage"></div>
-
-</div><div id="adminApp" class="layout"><nav class="sidebar">
-    <button class="active" data-section="dashboard" onclick="showSection('dashboard',this)">Dashboard</button>
-    <button data-section="students" onclick="showSection('students',this)">Students</button>
-    <button data-section="outpasses" onclick="showSection('outpasses',this)">Outpasses</button>
-    <button data-section="complaints" onclick="showSection('complaints',this)">Complaints</button>
-    <button data-section="attendance" onclick="showSection('attendance',this)">Attendance</button>
+<div id="adminApp" class="layout">
+<nav class="sidebar">
+    <button class="active" onclick="showSection('dashboard',this)">Dashboard</button>
+    <button onclick="showSection('students',this)">Students</button>
+    <button onclick="showSection('outpasses',this)">Outpasses</button>
+    <button onclick="showSection('complaints',this)">Complaints</button>
+    <button onclick="showSection('attendance',this)">Attendance</button>
 </nav>
 
 <main>
 
-    <!-- DASHBOARD -->
-    <section id="dashboard" class="section active">
-        <h2>Dashboard Overview</h2>
-        <p>Welcome to the NGI Hostel Administration Panel.</p>
+<section id="dashboard" class="section active">
+    <h2>Dashboard Overview</h2>
+    <p>Welcome to the NGI Hostel Administration Panel.</p>
+    <div class="cards">
+        <div class="card"><h3>Registered Students</h3><div class="number" id="studentCount">0</div></div>
+        <div class="card"><h3>Outpasses</h3><div class="number" id="outpassCount">0</div></div>
+        <div class="card"><h3>Complaints</h3><div class="number" id="complaintCount">0</div></div>
+    </div>
+    <div id="dashboardMessage" class="message hidden"></div>
+    <button onclick="loadDashboard()">Refresh Dashboard</button>
+</section>
 
-        <div class="cards">
-            <div class="card">
-                <h3>Registered Students</h3>
-                <div class="number" id="studentCount">0</div>
-            </div>
+<section id="students" class="section">
+    <h2>Registered Students</h2>
+    <div class="top-actions">
+        <input id="studentSearch" placeholder="Search student ID or name" oninput="renderStudents()">
+        <button onclick="loadStudents()">Refresh Students</button>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Student ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Academic Year</th></tr></thead>
+            <tbody id="studentsTableBody"><tr><td colspan="5">Load student records.</td></tr></tbody>
+        </table>
+    </div>
+    <div id="studentsMessage"></div>
+</section>
 
-            <div class="card">
-                <h3>Outpasses</h3>
-                <div class="number" id="outpassCount">0</div>
-            </div>
+<section id="outpasses" class="section">
+    <h2>Outpass Management</h2>
+    <div class="top-actions"><button onclick="loadOutpasses()">Refresh Outpasses</button></div>
+    <div id="outpassMessage"></div>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>ID</th><th>Student ID</th><th>Reason</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody id="outpassesTableBody"><tr><td colspan="6">Load outpasses.</td></tr></tbody>
+        </table>
+    </div>
+</section>
 
-            <div class="card">
-                <h3>Complaints</h3>
-                <div class="number" id="complaintCount">0</div>
-            </div>
-        </div>
+<section id="complaints" class="section">
+    <h2>Complaint Management</h2>
+    <div class="top-actions"><button onclick="loadComplaints()">Refresh Complaints</button></div>
+    <div id="complaintMessage"></div>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>ID</th><th>Student ID</th><th>Complaint</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody id="complaintsTableBody"><tr><td colspan="6">Load complaints.</td></tr></tbody>
+        </table>
+    </div>
+</section>
 
-        <div id="dashboardMessage" class="message hidden"></div>
-        <button onclick="loadDashboard()">Refresh Dashboard</button>
-    </section>
+<section id="attendance" class="section">
+    <h2>Attendance Management</h2>
 
-    <!-- STUDENTS -->
-    <section id="students" class="section">
-        <h2>Registered Students</h2>
+<div class="card">
+    <h3>Mark Student Attendance</h3>
+    <p class="note">Choose a registered student, date and attendance status.</p>
+    <form id="attendanceForm" class="attendance-form">
+        <label>Student
+            <select id="attendanceStudent" required>
+                <option value="">Select student</option>
+            </select>
+        </label>
+        <label>Date
+            <input id="attendanceDate" type="date" required>
+        </label>
+        <label>Status
+            <select id="attendanceStatus" required>
+                <option value="Present">Present</option>
+                <option value="Absent">Absent</option>
+            </select>
+        </label>
+        <button type="submit">Save Attendance</button>
+    </form>
+    <div id="attendanceMessage" aria-live="polite"></div>
+</div>
 
-        <div class="top-actions">
-            <input id="studentSearch" placeholder="Search student ID or name" oninput="renderStudents()">
-            <button onclick="loadStudents()">Refresh Students</button>
-        </div>
+<h3>Saved Attendance Records</h3>
+<div class="top-actions">
+    <input id="attendanceFilterDate" type="date">
+    <button onclick="loadAttendance()">Load Attendance</button>
+</div>
 
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Student ID</th>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Phone</th>
-                        <th>Academic Year</th>
-                    </tr>
-                </thead>
-                <tbody id="studentsTableBody">
-                    <tr><td colspan="5">Load student records.</td></tr>
-                </tbody>
-            </table>
-        </div>
+<div class="table-wrap">
+    <table>
+        <thead><tr><th>Student ID</th><th>Name</th><th>Date</th><th>Status</th></tr></thead>
+        <tbody id="attendanceTableBody">
+            <tr><td colspan="4">Loading attendance records...</td></tr>
+        </tbody>
+    </table>
+</div>
 
-        <div id="studentsMessage"></div>
-    </section>
-
-    <!-- OUTPASSES -->
-    <section id="outpasses" class="section">
-        <h2>Outpass Management</h2>
-
-        <div class="top-actions">
-            <button onclick="loadOutpasses()">Refresh Outpasses</button>
-        </div>
-
-        <div id="outpassMessage"></div>
-
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Student ID</th>
-                        <th>Reason</th>
-                        <th>Date</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="outpassesTableBody">
-                    <tr><td colspan="6">Load outpasses.</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </section>
-
-    <!-- COMPLAINTS -->
-    <section id="complaints" class="section">
-        <h2>Complaint Management</h2>
-
-        <div class="top-actions">
-            <button onclick="loadComplaints()">Refresh Complaints</button>
-        </div>
-
-        <div id="complaintMessage"></div>
-
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Student ID</th>
-                        <th>Complaint</th>
-                        <th>Date</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="complaintsTableBody">
-                    <tr><td colspan="6">Load complaints.</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </section>
-
-    <!-- ATTENDANCE -->
-    <section id="attendance" class="section">
-        <h2>Attendance Records</h2>
-
-        <div class="top-actions">
-            <input id="attendanceDate" type="date">
-            <button onclick="loadAttendance()">Load Attendance</button>
-        </div>
-
-        <div id="attendanceMessage"></div>
-
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Student ID</th>
-                        <th>Name</th>
-                        <th>Date</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody id="attendanceTableBody">
-                    <tr><td colspan="4">Choose a date and load attendance.</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </section>
+</section>
 
 </main>
+</div>
 
-</div><script>
+<script>
 const API_BASE = "https://hostel-management-system-api-426c.onrender.com";
 
 let studentsData = [];
@@ -229,116 +196,86 @@ let complaintsData = [];
 let attendanceData = [];
 
 function getToken() {
-    const keys = ["adminToken", "admin_token", "admin_token_key", "token", "authToken"];
-
-    for (const storage of [sessionStorage, localStorage]) {
+    const keys = ["adminToken","admin_token","admin_token_key","token","authToken"];
+    for (const storage of [sessionStorage,localStorage]) {
         for (const key of keys) {
             const value = storage.getItem(key);
-
-            if (value && value !== "null" && value !== "undefined") {
-                return value;
-            }
+            if (value && value !== "null" && value !== "undefined") return value;
         }
     }
-
     return "";
 }
 
 function setToken(token) {
-    localStorage.setItem("adminToken", token);
-    sessionStorage.setItem("adminToken", token);
+    localStorage.setItem("adminToken",token);
+    sessionStorage.setItem("adminToken",token);
 }
 
 function clearToken() {
-    for (const storage of [sessionStorage, localStorage]) {
-        ["adminToken", "admin_token", "admin_token_key", "token", "authToken"]
+    for (const storage of [sessionStorage,localStorage]) {
+        ["adminToken","admin_token","admin_token_key","token","authToken"]
             .forEach(key => storage.removeItem(key));
     }
 }
 
-function showMessage(id, message, type = "") {
-    const element = document.getElementById(id);
-    if (!element) return;
-
-    element.textContent = message;
-    element.className =
-        type === "error" ? "message error" :
-        type === "success" ? "message success" : "message";
-
-    element.classList.toggle("hidden", !message);
+function showMessage(id,message,type="") {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = message;
+    el.className = type === "error" ? "message error" :
+                   type === "success" ? "message success" : "message";
+    el.classList.toggle("hidden",!message);
 }
 
 function escapeHTML(value) {
-    return String(value ?? "").replace(/[&<>"']/g, c => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;"
+    return String(value ?? "").replace(/[&<>"']/g,c => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
     }[c]));
 }
 
-function getArray(data, key) {
+function getArray(data,key) {
     if (Array.isArray(data)) return data;
     if (data && Array.isArray(data[key])) return data[key];
     return [];
 }
 
-async function api(path, options = {}) {
-    const headers = { ...(options.headers || {}) };
+async function api(path,options={}) {
+    const headers = {...(options.headers || {})};
     const token = getToken();
-
     if (token) headers.Authorization = "Bearer " + token;
-
     if (options.body && !headers["Content-Type"]) {
         headers["Content-Type"] = "application/json";
     }
 
-    const response = await fetch(API_BASE + path, {
-        ...options,
-        headers
-    });
-
+    const response = await fetch(API_BASE + path,{...options,headers});
     let data = {};
-
-    try {
-        data = await response.json();
-    } catch (error) {}
+    try { data = await response.json(); } catch(e) {}
 
     if (!response.ok || data.success === false) {
-        throw new Error(
-            data.message || data.error || ("Request failed: " + response.status)
-        );
+        throw new Error(data.message || data.error || ("Request failed: " + response.status));
     }
-
     return data;
 }
 
-function showSection(id, button) {
-    document.querySelectorAll(".section").forEach(section => {
-        section.classList.remove("active");
-    });
-
+function showSection(id,button) {
+    document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
     document.getElementById(id).classList.add("active");
-
-    document.querySelectorAll(".sidebar button").forEach(btn => {
-        btn.classList.remove("active");
-    });
-
+    document.querySelectorAll(".sidebar button").forEach(b => b.classList.remove("active"));
     if (button) button.classList.add("active");
 
     if (id === "dashboard") loadDashboard();
     if (id === "students") loadStudents();
     if (id === "outpasses") loadOutpasses();
     if (id === "complaints") loadComplaints();
-    if (id === "attendance") loadAttendance();
+    if (id === "attendance") {
+        loadStudents().then(loadAttendance);
+    }
 }
 
 async function adminLogin() {
     const username = document.getElementById("adminUsername").value.trim();
     const password = document.getElementById("adminPassword").value;
     const message = document.getElementById("loginMessage");
-
     message.textContent = "";
 
     if (!username || !password) {
@@ -347,33 +284,24 @@ async function adminLogin() {
     }
 
     try {
-        const data = await api("/api/admin/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username, password })
+        const data = await api("/api/admin/login",{
+            method:"POST",
+            body:JSON.stringify({username,password})
         });
-
         const token = data.token || data.access_token || data.admin_token;
-
-        if (!token) {
-            throw new Error("Login response did not contain an authentication token.");
-        }
+        if (!token) throw new Error("Login response did not contain an authentication token.");
 
         setToken(token);
-
         document.getElementById("loginPanel").classList.add("hidden");
         document.getElementById("adminApp").classList.remove("hidden");
-
         await loadDashboard();
-
-    } catch (error) {
+    } catch(error) {
         message.textContent = error.message;
     }
 }
 
 function logoutAdmin() {
     clearToken();
-
     document.getElementById("adminApp").classList.add("hidden");
     document.getElementById("loginPanel").classList.remove("hidden");
 }
@@ -381,24 +309,15 @@ function logoutAdmin() {
 async function loadDashboard() {
     try {
         const data = await api("/api/admin/dashboard");
-
-        const students = getArray(data, "students");
-        const outpasses = getArray(data, "outpasses");
-        const complaints = getArray(data, "complaints");
-
         document.getElementById("studentCount").textContent =
-            data.student_count ?? students.length;
-
+            data.student_count ?? getArray(data,"students").length;
         document.getElementById("outpassCount").textContent =
-            data.outpass_count ?? outpasses.length;
-
+            data.outpass_count ?? getArray(data,"outpasses").length;
         document.getElementById("complaintCount").textContent =
-            data.complaint_count ?? complaints.length;
-
-        showMessage("dashboardMessage", "Dashboard updated.", "success");
-
-    } catch (error) {
-        showMessage("dashboardMessage", error.message, "error");
+            data.complaint_count ?? getArray(data,"complaints").length;
+        showMessage("dashboardMessage","Dashboard updated.","success");
+    } catch(error) {
+        showMessage("dashboardMessage",error.message,"error");
     }
 }
 
@@ -408,40 +327,50 @@ async function loadStudents() {
 
     try {
         const data = await api("/api/admin/students");
-        studentsData = getArray(data, "students");
+        studentsData = getArray(data,"students");
         renderStudents();
-
-        showMessage("studentsMessage", "", "");
-
-    } catch (error) {
-        body.innerHTML =
-            `<tr><td colspan="5">${escapeHTML(error.message)}</td></tr>`;
-
-        showMessage("studentsMessage", error.message, "error");
+        populateAttendanceStudents();
+        return true;
+    } catch(error) {
+        body.innerHTML = `<tr><td colspan="5">${escapeHTML(error.message)}</td></tr>`;
+        showMessage("studentsMessage",error.message,"error");
+        return false;
     }
 }
 
 function renderStudents() {
-    const query = (
-        document.getElementById("studentSearch").value || ""
-    ).toLowerCase();
-
-    const filtered = studentsData.filter(student =>
-        String(student.student_id || student.id || "").toLowerCase().includes(query) ||
-        String(student.name || student.full_name || "").toLowerCase().includes(query)
+    const query = (document.getElementById("studentSearch").value || "").toLowerCase();
+    const filtered = studentsData.filter(s =>
+        String(s.student_id || s.id || "").toLowerCase().includes(query) ||
+        String(s.name || s.full_name || "").toLowerCase().includes(query)
     );
 
     document.getElementById("studentsTableBody").innerHTML = filtered.length
-        ? filtered.map(student => `
-            <tr>
-                <td>${escapeHTML(student.student_id || student.id || "-")}</td>
-                <td>${escapeHTML(student.name || student.full_name || "-")}</td>
-                <td>${escapeHTML(student.email || "-")}</td>
-                <td>${escapeHTML(student.phone || student.mobile || "-")}</td>
-                <td>${escapeHTML(student.academic_year || student.year || "-")}</td>
-            </tr>
-        `).join("")
+        ? filtered.map(s => `<tr>
+            <td>${escapeHTML(s.student_id || s.id || "-")}</td>
+            <td>${escapeHTML(s.name || s.full_name || "-")}</td>
+            <td>${escapeHTML(s.email || "-")}</td>
+            <td>${escapeHTML(s.phone || s.mobile || "-")}</td>
+            <td>${escapeHTML(s.academic_year || s.year || "-")}</td>
+        </tr>`).join("")
         : '<tr><td colspan="5">No matching students found.</td></tr>';
+}
+
+function populateAttendanceStudents() {
+    const select = document.getElementById("attendanceStudent");
+    const previous = select.value;
+    select.innerHTML = '<option value="">Select student</option>';
+
+    studentsData.forEach(s => {
+        const id = s.student_id || s.id;
+        if (!id) return;
+        const option = document.createElement("option");
+        option.value = id;
+        option.textContent = `${id} - ${s.name || s.full_name || "Student"}`;
+        select.appendChild(option);
+    });
+
+    if ([...select.options].some(o => o.value === previous)) select.value = previous;
 }
 
 async function loadOutpasses() {
@@ -450,41 +379,26 @@ async function loadOutpasses() {
 
     try {
         const data = await api("/api/admin/outpasses");
-        outpassesData = getArray(data, "outpasses");
+        outpassesData = getArray(data,"outpasses");
 
-        body.innerHTML = outpassesData.length
-            ? outpassesData.map(outpass => {
-                const id = outpass.id ?? outpass.outpass_id;
-
-                return `
-                    <tr>
-                        <td>${escapeHTML(id)}</td>
-                        <td>${escapeHTML(outpass.student_id || "-")}</td>
-                        <td>${escapeHTML(outpass.reason || outpass.purpose || "-")}</td>
-                        <td>${escapeHTML(outpass.date || outpass.out_date || outpass.created_at || "-")}</td>
-                        <td>${escapeHTML(outpass.status || "Pending")}</td>
-                        <td>
-                            <button class="small-btn green"
-                                onclick="updateRequest('outpasses',${JSON.stringify(String(id))},'Approved')">
-                                Approve
-                            </button>
-                            <button class="small-btn red"
-                                onclick="updateRequest('outpasses',${JSON.stringify(String(id))},'Rejected')">
-                                Reject
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            }).join("")
-            : '<tr><td colspan="6">No outpass records found.</td></tr>';
-
-        showMessage("outpassMessage", "", "");
-
-    } catch (error) {
-        body.innerHTML =
-            `<tr><td colspan="6">${escapeHTML(error.message)}</td></tr>`;
-
-        showMessage("outpassMessage", error.message, "error");
+        body.innerHTML = outpassesData.length ? outpassesData.map(o => {
+            const id = o.id ?? o.outpass_id;
+            return `<tr>
+                <td>${escapeHTML(id)}</td>
+                <td>${escapeHTML(o.student_id || "-")}</td>
+                <td>${escapeHTML(o.reason || o.purpose || "-")}</td>
+                <td>${escapeHTML(o.date || o.out_date || o.created_at || "-")}</td>
+                <td>${escapeHTML(o.status || "Pending")}</td>
+                <td>
+                    <button class="small-btn green" onclick="updateRequest('outpasses',${JSON.stringify(String(id))},'Approved')">Approve</button>
+                    <button class="small-btn red" onclick="updateRequest('outpasses',${JSON.stringify(String(id))},'Rejected')">Reject</button>
+                </td>
+            </tr>`;
+        }).join("") : '<tr><td colspan="6">No outpass records found.</td></tr>';
+        showMessage("outpassMessage","","");
+    } catch(error) {
+        body.innerHTML = `<tr><td colspan="6">${escapeHTML(error.message)}</td></tr>`;
+        showMessage("outpassMessage",error.message,"error");
     }
 }
 
@@ -494,130 +408,121 @@ async function loadComplaints() {
 
     try {
         const data = await api("/api/admin/complaints");
-        complaintsData = getArray(data, "complaints");
+        complaintsData = getArray(data,"complaints");
 
-        body.innerHTML = complaintsData.length
-            ? complaintsData.map(complaint => {
-                const id = complaint.id ?? complaint.complaint_id;
-
-                return `
-                    <tr>
-                        <td>${escapeHTML(id)}</td>
-                        <td>${escapeHTML(complaint.student_id || "-")}</td>
-                        <td>${escapeHTML(complaint.complaint || complaint.description || complaint.message || "-")}</td>
-                        <td>${escapeHTML(complaint.date || complaint.created_at || "-")}</td>
-                        <td>${escapeHTML(complaint.status || "Pending")}</td>
-                        <td>
-                            <button class="small-btn green"
-                                onclick="updateRequest('complaints',${JSON.stringify(String(id))},'Resolved')">
-                                Resolve
-                            </button>
-                            <button class="small-btn orange"
-                                onclick="updateRequest('complaints',${JSON.stringify(String(id))},'In Progress')">
-                                In Progress
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            }).join("")
-            : '<tr><td colspan="6">No complaints found.</td></tr>';
-
-        showMessage("complaintMessage", "", "");
-
-    } catch (error) {
-        body.innerHTML =
-            `<tr><td colspan="6">${escapeHTML(error.message)}</td></tr>`;
-
-        showMessage("complaintMessage", error.message, "error");
+        body.innerHTML = complaintsData.length ? complaintsData.map(c => {
+            const id = c.id ?? c.complaint_id;
+            return `<tr>
+                <td>${escapeHTML(id)}</td>
+                <td>${escapeHTML(c.student_id || "-")}</td>
+                <td>${escapeHTML(c.complaint || c.description || c.message || "-")}</td>
+                <td>${escapeHTML(c.date || c.created_at || "-")}</td>
+                <td>${escapeHTML(c.status || "Pending")}</td>
+                <td>
+                    <button class="small-btn green" onclick="updateRequest('complaints',${JSON.stringify(String(id))},'Resolved')">Resolve</button>
+                    <button class="small-btn orange" onclick="updateRequest('complaints',${JSON.stringify(String(id))},'In Progress')">In Progress</button>
+                </td>
+            </tr>`;
+        }).join("") : '<tr><td colspan="6">No complaints found.</td></tr>';
+        showMessage("complaintMessage","","");
+    } catch(error) {
+        body.innerHTML = `<tr><td colspan="6">${escapeHTML(error.message)}</td></tr>`;
+        showMessage("complaintMessage",error.message,"error");
     }
 }
 
-async function updateRequest(type, id, status) {
+async function updateRequest(type,id,status) {
     if (!confirm("Change status to " + status + "?")) return;
 
     try {
         const singular = type === "outpasses" ? "outpass" : "complaint";
-
-        const data = await api(
-            `/api/admin/${singular}/${encodeURIComponent(id)}/status`,
-            {
-                method: "POST",
-                body: JSON.stringify({ status })
-            }
-        );
-
-        showMessage(
-            type === "outpasses" ? "outpassMessage" : "complaintMessage",
-            data.message || "Status updated.",
-            "success"
-        );
-
-        if (type === "outpasses") {
-            await loadOutpasses();
-        } else {
-            await loadComplaints();
-        }
-
-    } catch (error) {
-        showMessage(
-            type === "outpasses" ? "outpassMessage" : "complaintMessage",
-            "Status update failed: " + error.message,
-            "error"
-        );
+        const data = await api(`/api/admin/${singular}/${encodeURIComponent(id)}/status`,{
+            method:"POST",
+            body:JSON.stringify({status})
+        });
+        showMessage(type === "outpasses" ? "outpassMessage" : "complaintMessage",
+            data.message || "Status updated.","success");
+        if (type === "outpasses") await loadOutpasses();
+        else await loadComplaints();
+    } catch(error) {
+        showMessage(type === "outpasses" ? "outpassMessage" : "complaintMessage",
+            "Status update failed: " + error.message,"error");
     }
 }
+
+document.getElementById("attendanceForm").addEventListener("submit",async function(event) {
+    event.preventDefault();
+
+    const studentId = document.getElementById("attendanceStudent").value;
+    const date = document.getElementById("attendanceDate").value;
+    const status = document.getElementById("attendanceStatus").value;
+    const student = studentsData.find(s => String(s.student_id || s.id) === studentId);
+
+    if (!studentId || !date || !status) {
+        showMessage("attendanceMessage","Select a student, date and status.","error");
+        return;
+    }
+
+    try {
+        const result = await api("/api/admin/attendance",{
+            method:"POST",
+            body:JSON.stringify({
+                student_id:studentId,
+                attendance_date:date,
+                status:status
+            })
+        });
+
+        showMessage("attendanceMessage",
+            result.message || `Attendance saved: ${student?.name || studentId} — ${status}.`,
+            "success");
+
+        await loadAttendance();
+    } catch(error) {
+        showMessage("attendanceMessage","Could not save attendance: " + error.message,"error");
+    }
+});
 
 async function loadAttendance() {
     const body = document.getElementById("attendanceTableBody");
     body.innerHTML = '<tr><td colspan="4">Loading attendance...</td></tr>';
 
-    const date = document.getElementById("attendanceDate").value;
-    let path = "/api/admin/attendance";
-
-    if (date) {
-        path += "?date=" + encodeURIComponent(date);
-    }
-
     try {
-        const data = await api(path);
-        attendanceData = getArray(data, "attendance");
+        const data = await api("/api/admin/attendance");
+        attendanceData = getArray(data,"attendance");
 
-        body.innerHTML = attendanceData.length
-            ? attendanceData.map(record => `
-                <tr>
-                    <td>${escapeHTML(record.student_id || "-")}</td>
-                    <td>${escapeHTML(record.name || record.student_name || "-")}</td>
-                    <td>${escapeHTML(record.date || record.attendance_date || date || "-")}</td>
-                    <td>${escapeHTML(record.status || "-")}</td>
-                </tr>
-            `).join("")
-            : '<tr><td colspan="4">No attendance records found for this date.</td></tr>';
+        const date = document.getElementById("attendanceFilterDate").value;
+        const filtered = date ? attendanceData.filter(r =>
+            String(r.attendance_date || r.date || "").slice(0,10) === date
+        ) : attendanceData;
 
-        showMessage("attendanceMessage", "", "");
-
-    } catch (error) {
-        body.innerHTML =
-            `<tr><td colspan="4">${escapeHTML(error.message)}</td></tr>`;
-
-        showMessage("attendanceMessage", error.message, "error");
+        body.innerHTML = filtered.length ? filtered.map(r => `<tr>
+            <td>${escapeHTML(r.student_id || "-")}</td>
+            <td>${escapeHTML(r.student_name || r.name || "-")}</td>
+            <td>${escapeHTML(r.attendance_date || r.date || "-")}</td>
+            <td><strong>${escapeHTML(r.status || "-")}</strong></td>
+        </tr>`).join("") : '<tr><td colspan="4">No attendance records found for this date.</td></tr>';
+    } catch(error) {
+        body.innerHTML = `<tr><td colspan="4">${escapeHTML(error.message)}</td></tr>`;
+        showMessage("attendanceMessage",error.message,"error");
     }
 }
 
 function refreshCurrent() {
     const active = document.querySelector(".section.active");
     if (!active) return;
-
     const id = active.id;
-
     if (id === "dashboard") loadDashboard();
     else if (id === "students") loadStudents();
     else if (id === "outpasses") loadOutpasses();
     else if (id === "complaints") loadComplaints();
-    else if (id === "attendance") loadAttendance();
+    else if (id === "attendance") loadStudents().then(loadAttendance);
 }
 
-document.getElementById("attendanceDate").value =
-    new Date().toISOString().slice(0, 10);
+const today = new Date();
+const localDate = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
+document.getElementById("attendanceDate").value = localDate;
+document.getElementById("attendanceFilterDate").value = localDate;
 
 if (getToken()) {
     document.getElementById("loginPanel").classList.add("hidden");
@@ -627,5 +532,7 @@ if (getToken()) {
     document.getElementById("adminApp").classList.add("hidden");
     document.getElementById("loginPanel").classList.remove("hidden");
 }
-</script></body>
+</script>
+
+</body>
 </html>
