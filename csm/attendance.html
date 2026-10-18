@@ -4,17 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Attendance | NGI Hostel Management System</title>
-
     <style>
         * { box-sizing: border-box; }
-
         body {
             margin: 0;
             font-family: Arial, sans-serif;
             background: #f3f5fa;
             color: #252747;
         }
-
         header {
             background: #252747;
             color: white;
@@ -25,16 +22,9 @@
             flex-wrap: wrap;
             gap: 12px;
         }
-
         header h1 { font-size: 21px; margin: 0; }
         header a { color: white; text-decoration: none; }
-
-        main {
-            max-width: 1000px;
-            margin: 30px auto;
-            padding: 0 16px;
-        }
-
+        main { max-width: 1000px; margin: 30px auto; padding: 0 16px; }
         .panel {
             background: white;
             padding: 24px;
@@ -42,61 +32,50 @@
             margin-bottom: 20px;
             box-shadow: 0 3px 12px #0000000d;
         }
-
         .student-info { color: #666; }
-
+        label { display: block; margin: 15px 0 7px; font-weight: bold; }
+        input[type="date"] {
+            width: 100%;
+            max-width: 320px;
+            padding: 11px;
+            border: 1px solid #ccd1df;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+        .choice {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 18px 0;
+        }
+        button {
+            background: #4548a8;
+            color: white;
+            border: none;
+            padding: 11px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        button:disabled { opacity: .6; cursor: not-allowed; }
         .record {
             padding: 16px;
             margin: 12px 0;
             border: 1px solid #e4e6ef;
             border-radius: 8px;
         }
-
         .record p { margin: 7px 0; }
-
         .status {
             display: inline-block;
             padding: 5px 10px;
             border-radius: 5px;
             background: #e8f5e9;
+            color: #207245;
             font-weight: bold;
         }
-
-        .present { background: #e8f5e9; color: #207245; }
-        .absent { background: #ffebee; color: #b42318; }
-
-        .message {
-            padding: 12px 0;
-            color: #666;
-            overflow-wrap: anywhere;
-        }
-
-        button {
-            background: #4548a8;
-            color: white;
-            border: none;
-            padding: 11px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            margin: 5px 5px 5px 0;
-        }
-
-        button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .present-btn { background: #238653; }
-        .absent-btn { background: #c43d4b; }
-
-        footer {
-            text-align: center;
-            padding: 25px;
-            color: #777;
-        }
+        .message { padding: 12px 0; color: #666; overflow-wrap: anywhere; }
+        footer { text-align: center; padding: 25px; color: #777; }
     </style>
 </head>
-
 <body>
 <header>
     <h1>NGI Hostel Management System</h1>
@@ -106,35 +85,26 @@
 <main>
     <section class="panel">
         <h2>My Attendance</h2>
-
         <p id="studentInfo" class="student-info"></p>
 
-        <h3>Mark Today's Attendance</h3>
-        <p id="todayDate"></p>
-        <p>Select your attendance status for today.</p>
+        <form id="attendanceForm">
+            <label for="attendanceDate">Select Date</label>
+            <input type="date" id="attendanceDate" required>
 
-        <button type="button" class="present-btn"
-                id="presentButton" onclick="markAttendance('Present')">
-            Present
-        </button>
+            <div class="choice">
+                <input type="checkbox" id="present" required>
+                <label for="present" style="margin:0;">Present</label>
+            </div>
 
-        <button type="button" class="absent-btn"
-                id="absentButton" onclick="markAttendance('Absent')">
-            Absent
-        </button>
+            <button type="submit" id="submitButton">Submit Attendance</button>
+        </form>
 
         <p id="submitMessage" class="message" role="status"></p>
 
         <hr>
-
         <h3>Attendance History</h3>
-        <button type="button" onclick="loadAttendance()">
-            Refresh Attendance
-        </button>
-
-        <div id="attendanceRecords" class="message">
-            Loading attendance...
-        </div>
+        <button type="button" id="refreshButton">Refresh Attendance</button>
+        <div id="attendanceRecords" class="message">Loading attendance...</div>
     </section>
 </main>
 
@@ -143,11 +113,13 @@
 <script>
 const API_BASE = "https://hostel-management-system-api-426c.onrender.com";
 
-const recordsContainer = document.getElementById("attendanceRecords");
 const studentInfo = document.getElementById("studentInfo");
+const recordsContainer = document.getElementById("attendanceRecords");
 const submitMessage = document.getElementById("submitMessage");
-const presentButton = document.getElementById("presentButton");
-const absentButton = document.getElementById("absentButton");
+const form = document.getElementById("attendanceForm");
+const submitButton = document.getElementById("submitButton");
+const dateInput = document.getElementById("attendanceDate");
+const presentCheckbox = document.getElementById("present");
 
 function getLoggedInStudent() {
     const saved =
@@ -159,84 +131,91 @@ function getLoggedInStudent() {
 
     try {
         return JSON.parse(saved);
-    } catch (error) {
+    } catch {
         return null;
     }
 }
 
-function getToday() {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-
-    return `${year}-${month}-${day}`;
-}
-
-document.getElementById("todayDate").textContent =
-    "Date: " + getToday();
-
-async function markAttendance(status) {
+function showStudent() {
     const student = getLoggedInStudent();
 
     if (!student || !student.student_id) {
-        submitMessage.textContent =
-            "Your login details are missing. Please log in again.";
-        return;
-    }
-
-    presentButton.disabled = true;
-    absentButton.disabled = true;
-    submitMessage.textContent = "Saving attendance...";
-
-    try {
-        const response = await fetch(API_BASE + "/api/attendance", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                student_id: student.student_id,
-                attendance_date: getToday(),
-                status: status
-            })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok || !data.success) {
-            throw new Error(data.message || "Unable to save attendance.");
-        }
-
-        submitMessage.textContent =
-            "Attendance marked as " + status + " successfully.";
-
-        await loadAttendance();
-
-    } catch (error) {
-        console.error("Attendance submission error:", error);
-
-        submitMessage.textContent =
-            "Could not save attendance. Please try again.";
-    } finally {
-        presentButton.disabled = false;
-        absentButton.disabled = false;
-    }
-}
-
-async function loadAttendance() {
-    const student = getLoggedInStudent();
-
-    if (!student || !student.student_id) {
-        studentInfo.textContent = "";
-        recordsContainer.textContent =
-            "Student login details are missing. Please log in again.";
-        return;
+        studentInfo.textContent = "Please log in again to mark attendance.";
+        form.hidden = true;
+        return null;
     }
 
     studentInfo.textContent =
         "Student: " + (student.name || student.username || "Student") +
         " | Student ID: " + student.student_id;
+
+    return student;
+}
+
+function localToday() {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
+dateInput.value = localToday();
+dateInput.max = localToday();
+
+form.addEventListener("submit", async function(event) {
+    event.preventDefault();
+
+    const student = showStudent();
+    if (!student) return;
+
+    if (!dateInput.value) {
+        submitMessage.textContent = "Please select a date.";
+        return;
+    }
+
+    if (!presentCheckbox.checked) {
+        submitMessage.textContent = "Please select Present before submitting.";
+        return;
+    }
+
+    submitButton.disabled = true;
+    submitMessage.textContent = "Submitting attendance...";
+
+    try {
+        const response = await fetch(API_BASE + "/api/attendance", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                student_id: student.student_id,
+                attendance_date: dateInput.value,
+                status: "Present"
+            })
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok || data.success !== true) {
+            throw new Error(data.message || `Request failed (${response.status}).`);
+        }
+
+        submitMessage.textContent = "Attendance submitted successfully.";
+        presentCheckbox.checked = false;
+        await loadAttendance();
+
+    } catch (error) {
+        console.error("Attendance submission error:", error);
+        submitMessage.textContent =
+            "Could not save attendance: " + error.message;
+    } finally {
+        submitButton.disabled = false;
+    }
+});
+
+async function loadAttendance() {
+    const student = showStudent();
+
+    if (!student) {
+        recordsContainer.textContent = "Please log in again.";
+        return;
+    }
 
     recordsContainer.textContent = "Loading attendance...";
 
@@ -246,19 +225,17 @@ async function loadAttendance() {
             encodeURIComponent(student.student_id)
         );
 
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
 
-        if (!response.ok || !data.success) {
-            throw new Error(data.message || "Unable to load attendance.");
+        if (!response.ok || data.success !== true) {
+            throw new Error(data.message || `Request failed (${response.status}).`);
         }
 
         recordsContainer.replaceChildren();
-
         const records = data.attendance || [];
 
         if (records.length === 0) {
-            recordsContainer.textContent =
-                "No attendance records found. Mark your attendance above.";
+            recordsContainer.textContent = "No attendance records found yet.";
             return;
         }
 
@@ -269,29 +246,24 @@ async function loadAttendance() {
             const date = document.createElement("p");
             date.textContent = "Date: " + record.attendance_date;
 
-            const statusText = document.createElement("p");
-            statusText.textContent = "Status: " + record.status;
-
-            const badge = document.createElement("span");
-            badge.className = "status " +
-                (record.status === "Present" ? "present" : "absent");
-            badge.textContent = record.status;
+            const status = document.createElement("span");
+            status.className = "status";
+            status.textContent = record.status;
 
             card.appendChild(date);
-            card.appendChild(statusText);
-            card.appendChild(badge);
-
+            card.appendChild(status);
             recordsContainer.appendChild(card);
         });
 
     } catch (error) {
         console.error("Attendance loading error:", error);
-
         recordsContainer.textContent =
-            "Could not load attendance. Please refresh and try again.";
+            "Could not load attendance: " + error.message;
     }
 }
 
+document.getElementById("refreshButton").addEventListener("click", loadAttendance);
+showStudent();
 loadAttendance();
 </script>
 </body>
