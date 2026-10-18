@@ -1,183 +1,292 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard | NGI Hostel Management System</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NGI Hostel Management - Admin Dashboard</title>
+
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f3f6fb;color:#263247}
+header{background:#12366b;color:white;padding:22px}
+header h1{margin:0;font-size:23px}
+header p{margin:7px 0 0}
+.container{max-width:1200px;margin:25px auto;padding:0 16px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:15px}
+.card{background:white;padding:20px;border-radius:12px;box-shadow:0 3px 12px #0000000c}
+.card h3{margin:0 0 12px;font-size:15px;color:#53657d}
+.number{font-size:28px;font-weight:bold;color:#12366b}
+button{border:0;padding:10px 15px;border-radius:6px;background:#174b91;color:white;cursor:pointer}
+button:hover{background:#0c3267}
+.section{background:white;margin-top:22px;padding:20px;border-radius:12px;box-shadow:0 3px 12px #0000000c}
+.section h2{margin-top:0}
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+#status{margin:14px 0;padding:12px;background:#eef4ff;border-radius:7px;overflow-wrap:anywhere}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:650px}
+th,td{padding:12px;text-align:left;border-bottom:1px solid #e7ebf1;font-size:14px}
+th{background:#f2f5fa}
+.error{background:#fff0f0!important;color:#a32222}
+.empty{text-align:center;padding:25px;color:#68778c}
+@media(max-width:600px){header h1{font-size:19px}.section{padding:14px}}
+</style>
 </head>
-<body><header>
-    <h1>Nehru Group of Institutions</h1>
-    <p>Hostel Management System — Admin Portal</p>
-</header><main class="login-container">
-    <h2>Admin Dashboard</h2><div id="adminLoginSection">
-    <h3>Admin Login</h3>
 
-    <form id="adminLoginForm">
-        <label for="adminUsername">Username</label>
-        <input type="text" id="adminUsername"
-               placeholder="Enter admin username" required>
+<body>
+<header>
+    <h1>NGI Hostel Management System</h1>
+    <p>Administrator Dashboard</p>
+</header>
 
-        <label for="adminPassword">Password</label>
-        <input type="password" id="adminPassword"
-               placeholder="Enter admin password" required>
+<main class="container">
 
-        <button type="submit">Login</button>
-    </form>
+    <div class="cards">
+        <div class="card">
+            <h3>Registered Students</h3>
+            <div class="number" id="studentCount">—</div>
+        </div>
+        <div class="card">
+            <h3>Outpass Applications</h3>
+            <div class="number" id="outpassCount">—</div>
+        </div>
+        <div class="card">
+            <h3>Complaints</h3>
+            <div class="number" id="complaintCount">—</div>
+        </div>
+    </div>
 
-    <p id="loginMessage"></p>
-</div>
+    <section class="section">
+        <div class="toolbar">
+            <h2>Registered Students</h2>
+            <button onclick="loadStudents()">Refresh Students</button>
+        </div>
 
-<div id="adminDashboard" style="display:none;">
-    <p>Welcome, Administrator!</p>
+        <div id="status">Loading student records...</div>
 
-    <section>
-        <h3>Student Records</h3>
-        <p>View registered students and their details.</p>
-        <button type="button" id="viewStudents">
-            View Student Records
-        </button>
-        <p id="message"></p>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Student ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Department</th>
+                        <th>Year</th>
+                        <th>Room</th>
+                    </tr>
+                </thead>
+                <tbody id="studentsTable">
+                    <tr><td colspan="6" class="empty">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
     </section>
 
-    <div id="studentRecords"></div>
-    <button type="button" id="logout">Logout</button>
-</div>
+    <section class="section">
+        <h2>Outpass Applications</h2>
+        <div id="outpassList">Loading applications...</div>
+    </section>
 
-</main><script>
-const API_URL = "https://hostel-management-system-api-426c.onrender.com";
+    <section class="section">
+        <h2>Student Complaints</h2>
+        <div id="complaintList">Loading complaints...</div>
+    </section>
 
-const loginForm = document.getElementById("adminLoginForm");
-const loginSection = document.getElementById("adminLoginSection");
-const dashboard = document.getElementById("adminDashboard");
-const loginMessage = document.getElementById("loginMessage");
-const message = document.getElementById("message");
-const records = document.getElementById("studentRecords");
+    <section class="section">
+        <h2>Attendance</h2>
+        <div id="attendanceList">Use the backend attendance endpoint to load records.</div>
+    </section>
 
-async function loadStudentRecords() {
-    const token = sessionStorage.getItem("adminToken");
-    records.replaceChildren();
+    <section class="section">
+        <h2>Fees</h2>
+        <div id="feesList">Use the backend fees endpoint to load records.</div>
+    </section>
 
-    if (!token) {
-        message.textContent = "Please log in first.";
-        return;
+</main>
+
+<script>
+const API = "https://hostel-management-system-api-426c.onrender.com";
+
+function getAdminToken() {
+    const keys = [
+        "adminToken", "admin_token", "admin_token_key",
+        "token", "authToken", "access_token"
+    ];
+
+    for (const key of keys) {
+        const value = localStorage.getItem(key) ||
+                      sessionStorage.getItem(key);
+        if (value) return value;
     }
 
-    message.textContent = "Loading student records...";
+    return "";
+}
+
+async function apiGet(path) {
+    const token = getAdminToken();
+
+    const headers = {};
+    if (token) headers["Authorization"] = "Bearer " + token;
+
+    const response = await fetch(API + path, { headers });
+
+    const text = await response.text();
+    let data;
 
     try {
-        const response = await fetch(`${API_URL}/api/admin/students`, {
-            headers: {
-                "Authorization": `Bearer ${token}`
-            }
-        });
+        data = JSON.parse(text);
+    } catch {
+        throw new Error("Backend returned an invalid response.");
+    }
 
-        const result = await response.json();
-
-        if (!response.ok || !result.success) {
-            message.textContent =
-                result.message || "Unable to load student records.";
-            return;
+    if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+            throw new Error("Admin authentication failed. Please log in again.");
         }
 
-        if (!result.students || result.students.length === 0) {
-            message.textContent = "No registered students found.";
+        throw new Error(data.message || data.error ||
+                        "Request failed: " + response.status);
+    }
+
+    return data;
+}
+
+function showError(elementId, message) {
+    const element = document.getElementById(elementId);
+    element.className = "error";
+    element.textContent = message;
+}
+
+function renderTableRows(items, columns) {
+    if (!Array.isArray(items) || items.length === 0) {
+        return '<tr><td colspan="' + columns.length +
+               '" class="empty">No records found.</td></tr>';
+    }
+
+    return items.map(item => '<tr>' +
+        columns.map(column =>
+            '<td>' + escapeHTML(item[column] ?? "—") + '</td>'
+        ).join("") +
+        '</tr>').join("");
+}
+
+function escapeHTML(value) {
+    return String(value).replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[char]);
+}
+
+async function loadStudents() {
+    const status = document.getElementById("status");
+    const table = document.getElementById("studentsTable");
+
+    status.className = "";
+    status.textContent = "Loading student records...";
+    table.innerHTML = '<tr><td colspan="6">Loading...</td></tr>';
+
+    try {
+        const data = await apiGet("/api/admin/students");
+
+        const students = Array.isArray(data)
+            ? data
+            : data.students || data.data || [];
+
+        if (!Array.isArray(students)) {
+            throw new Error("Unexpected student records format.");
+        }
+
+        document.getElementById("studentCount").textContent =
+            data.count ?? students.length;
+
+        table.innerHTML = renderTableRows(students, [
+            "student_id", "name", "email", "department", "year",
+            "room_number"
+        ]);
+
+        status.textContent = students.length
+            ? "Successfully loaded " + students.length + " student record(s)."
+            : "The API returned zero students. Existing records may be in a different database.";
+
+    } catch (error) {
+        table.innerHTML =
+            '<tr><td colspan="6" class="empty">Could not load records.</td></tr>';
+
+        showError("status", error.message);
+    }
+}
+
+async function loadList(path, elementId, countId) {
+    try {
+        const data = await apiGet(path);
+        const items = Array.isArray(data)
+            ? data
+            : data.items || data.outpasses || data.complaints ||
+              data.attendance || data.fees || data.data || [];
+
+        if (countId) {
+            document.getElementById(countId).textContent =
+                data.count ?? items.length;
+        }
+
+        const target = document.getElementById(elementId);
+
+        if (!Array.isArray(items) || items.length === 0) {
+            target.textContent = "No records found.";
             return;
         }
 
         const table = document.createElement("table");
-        const headings = [
-            "Student ID", "Name", "Email", "Username",
-            "Department", "Year", "Academic Year", "Room", "Phone"
-        ];
-
         const header = document.createElement("tr");
 
-        headings.forEach(item => {
+        const columns = Object.keys(items[0]);
+        columns.forEach(column => {
             const th = document.createElement("th");
-            th.textContent = item;
+            th.textContent = column.replaceAll("_", " ");
             header.appendChild(th);
         });
 
-        table.appendChild(header);
+        const thead = document.createElement("thead");
+        thead.appendChild(header);
+        table.appendChild(thead);
 
-        result.students.forEach(student => {
-            const row = document.createElement("tr");
+        const tbody = document.createElement("tbody");
 
-            [
-                "student_id", "name", "email", "username",
-                "department", "year", "academic_year",
-                "room_number", "phone"
-            ].forEach(key => {
-                const cell = document.createElement("td");
-                cell.textContent = student[key] ?? "-";
-                row.appendChild(cell);
+        items.forEach(item => {
+            const tr = document.createElement("tr");
+
+            columns.forEach(column => {
+                const td = document.createElement("td");
+                td.textContent = item[column] ?? "—";
+                tr.appendChild(td);
             });
 
-            table.appendChild(row);
+            tbody.appendChild(tr);
         });
 
-        records.appendChild(table);
-        message.textContent =
-            `Total registered students: ${result.count ?? result.students.length}`;
+        table.appendChild(tbody);
+        target.replaceChildren(table);
 
     } catch (error) {
-        message.textContent =
-            "Unable to connect. Please check the backend connection.";
-        console.error("Student records error:", error);
+        document.getElementById(elementId).textContent = error.message;
     }
 }
 
-loginForm.addEventListener("submit", async event => {
-    event.preventDefault();
-    loginMessage.textContent = "Checking login details...";
+async function loadDashboard() {
+    await loadStudents();
 
-    const username = document.getElementById("adminUsername").value.trim();
-    const password = document.getElementById("adminPassword").value;
-
-    try {
-        const response = await fetch(`${API_URL}/api/admin/login`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ username, password })
-        });
-
-        const result = await response.json();
-
-        if (!response.ok || !result.success || !result.token) {
-            loginMessage.textContent =
-                result.message || "Login failed. Please try again.";
-            return;
-        }
-
-        sessionStorage.setItem("adminToken", result.token);
-        loginSection.style.display = "none";
-        dashboard.style.display = "block";
-        loginMessage.textContent = "";
-
-        await loadStudentRecords();
-
-    } catch (error) {
-        loginMessage.textContent =
-            "Unable to connect to the backend. Please try again.";
-        console.error("Admin login error:", error);
-    }
-});
-
-document.getElementById("viewStudents").addEventListener(
-    "click", loadStudentRecords
-);
-
-document.getElementById("logout").addEventListener("click", () => {
-    sessionStorage.removeItem("adminToken");
-    window.location.reload();
-});
-
-if (sessionStorage.getItem("adminToken")) {
-    loginSection.style.display = "none";
-    dashboard.style.display = "block";
-    loadStudentRecords();
+    await Promise.all([
+        loadList("/api/admin/outpasses", "outpassList", "outpassCount"),
+        loadList("/api/admin/complaints", "complaintList", "complaintCount"),
+        loadList("/api/admin/attendance", "attendanceList"),
+        loadList("/api/admin/fees", "feesList")
+    ]);
 }
-</script></body>
+
+loadDashboard();
+</script>
+</body>
 </html>
