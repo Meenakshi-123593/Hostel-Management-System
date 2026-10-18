@@ -1,101 +1,187 @@
 <!DOCTYPE html><html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Outpass Management</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Outpass Management</title>
+<link rel="stylesheet" href="style.css">
+<style>
+body{font-family:Arial,sans-serif;margin:0;background:#f3f6fb;color:#263247}
+header{background:#12366b;color:white;padding:20px;text-align:center}
+main{max-width:650px;margin:25px auto;padding:20px;background:white;border-radius:10px}
+label{display:block;margin-top:14px;font-weight:bold}
+input,textarea{width:100%;padding:10px;margin-top:6px;box-sizing:border-box}
+button{padding:11px 16px;margin-top:16px;border:0;border-radius:5px;background:#12366b;color:white;cursor:pointer}
+#outpassMessage{white-space:pre-wrap}
+</style>
 </head>
-<body><header>
-    <h1>Hostel Management System</h1>
-    <p>Outpass Application</p>
+<body>
+<header>
+<h1>Hostel Management System</h1>
+<p>Outpass Application</p>
 </header><main>
-    <h2>Apply for Outpass</h2><form id="outpassForm">
-    <label for="studentName">Student Name:</label>
-    <input id="studentName" required>
+<h2>Apply for Outpass</h2><form id="outpassForm">
+<label for="studentId">Student ID:</label>
+<input id="studentId" required placeholder="Enter your registered Student ID"><label for="reason">Reason:</label>
 
-    <label for="studentPassword">Password:</label>
-    <input id="studentPassword" type="password" required>
+<textarea id="reason" rows="3" required></textarea><label for="destination">Destination:</label>
+<input id="destination" required>
 
-    <label for="room">Room Number:</label>
-    <input id="room" required>
+<label for="departure">Departure Date and Time:</label>
+<input id="departure" type="datetime-local" required>
 
-    <label for="reason">Reason:</label>
-    <textarea id="reason" rows="3" required></textarea>
+<label for="returnDate">Expected Return Date and Time:</label>
+<input id="returnDate" type="datetime-local" required>
 
-    <label for="departure">Departure Date and Time:</label>
-    <input id="departure" type="datetime-local" required>
+<button type="submit" id="submitButton">Submit Outpass</button>
 
-    <label for="returnDate">Expected Return Date and Time:</label>
-    <input id="returnDate" type="datetime-local" required>
-
-    <button type="submit">Submit Outpass</button>
-    <p id="outpassMessage"></p>
-</form>
-
-<section class="panel">
-    <h2>Monthly Outpass Summary</h2>
-    <label for="month">Select Month:</label>
-    <input id="month" type="month">
-    <button onclick="showMonthlyCount()">Check Count</button>
-    <p id="monthlyCount">Outpasses submitted in this browser: 0</p>
-</section>
-
-<button onclick="location.href='dashboard.html'">
-    Back to Dashboard
+<p id="outpassMessage" role="status"></p>
+</form><section>
+<h2>My Outpass Applications</h2>
+<button type="button" id="refreshButton">Refresh Status</button>
+<div id="myOutpasses">Loading applications...</div>
+</section><button type="button" onclick="location.href='dashboard.html'">
+Back to Dashboard
 </button>
-
 </main><script>
-function getOutpasses() {
-    return JSON.parse(localStorage.getItem("hostelOutpasses") || "[]");
+const API_BASE = "https://hostel-management-system-api-426c.onrender.com";
+
+function getStudentId() {
+    const keys = [
+        "student_id", "studentId", "loggedInStudentId",
+        "currentStudentId", "username"
+    ];
+
+    for (const key of keys) {
+        const value = localStorage.getItem(key) || sessionStorage.getItem(key);
+        if (value && /^STU\d+$/i.test(value.trim())) return value.trim();
+    }
+
+    return "";
 }
 
-document.getElementById("outpassForm").addEventListener("submit", function(event) {
+function getToken() {
+    const keys = [
+        "studentToken", "student_token", "token",
+        "authToken", "access_token"
+    ];
+
+    for (const key of keys) {
+        const value = localStorage.getItem(key) || sessionStorage.getItem(key);
+        if (value) return value;
+    }
+    return "";
+}
+
+const form = document.getElementById("outpassForm");
+const message = document.getElementById("outpassMessage");
+
+form.addEventListener("submit", async function(event) {
     event.preventDefault();
 
+    const studentId = document.getElementById("studentId").value.trim();
     const departure = document.getElementById("departure").value;
     const returnDate = document.getElementById("returnDate").value;
 
     if (new Date(returnDate) <= new Date(departure)) {
-        document.getElementById("outpassMessage").textContent =
-            "Return time must be after departure time.";
+        message.textContent = "Return time must be after departure time.";
         return;
     }
 
-    const records = getOutpasses();
+    const button = document.getElementById("submitButton");
+    button.disabled = true;
+    message.textContent = "Submitting...";
 
-    records.push({
-        name: document.getElementById("studentName").value,
-        room: document.getElementById("room").value,
-        reason: document.getElementById("reason").value,
-        departure: departure,
-        returnDate: returnDate,
-        submittedAt: new Date().toISOString(),
-        status: "Pending"
-    });
+    try {
+        const response = await fetch(API_BASE + "/api/outpasses", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                ...(getToken() ? {"Authorization": "Bearer " + getToken()} : {})
+            },
+            body: JSON.stringify({
+                student_id: studentId,
+                reason: document.getElementById("reason").value.trim(),
+                destination: document.getElementById("destination").value.trim(),
+                from_date: departure,
+                to_date: returnDate
+            })
+        });
 
-    localStorage.setItem("hostelOutpasses", JSON.stringify(records));
+        const data = await response.json().catch(() => ({}));
 
-    document.getElementById("outpassMessage").textContent =
-        "Outpass request submitted. Status: Pending approval.";
+        if (!response.ok) {
+            throw new Error(data.error || data.message || "Request failed (" + response.status + ").");
+        }
 
-    this.reset();
-    showMonthlyCount();
+        message.textContent = data.message || "Outpass submitted successfully. Status: Pending.";
+        form.reset();
+        document.getElementById("studentId").value = studentId;
+        await loadMyOutpasses();
+    } catch (error) {
+        message.textContent = "Could not submit outpass: " + error.message;
+    } finally {
+        button.disabled = false;
+    }
 });
 
-function showMonthlyCount() {
-    const month = document.getElementById("month").value ||
-        new Date().toISOString().slice(0, 7);
+async function loadMyOutpasses() {
+    const studentId = document.getElementById("studentId").value.trim();
+    const container = document.getElementById("myOutpasses");
 
-    document.getElementById("month").value = month;
+    if (!studentId) {
+        container.textContent = "Enter your registered Student ID to view your applications.";
+        return;
+    }
 
-    const count = getOutpasses().filter(record =>
-        record.departure.slice(0, 7) === month
-    ).length;
+    try {
+        const response = await fetch(
+            API_BASE + "/api/outpasses?student_id=" + encodeURIComponent(studentId),
+            {
+                headers: getToken()
+                    ? {"Authorization": "Bearer " + getToken()}
+                    : {}
+            }
+        );
 
-    document.getElementById("monthlyCount").textContent =
-        "Outpasses for " + month + ": " + count;
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || data.message || "Could not load applications.");
+        }
+
+        const records = Array.isArray(data) ? data :
+            (data.outpasses || data.records || []);
+
+        if (!records.length) {
+            container.textContent = "No outpass applications found.";
+            return;
+        }
+
+        container.innerHTML = records.map(item => `
+            <div style="padding:12px;margin:10px 0;border:1px solid #ddd;border-radius:6px">
+                <strong>Reason:</strong> ${escapeHTML(item.reason || "")}<br>
+                <strong>Destination:</strong> ${escapeHTML(item.destination || "")}<br>
+                <strong>Departure:</strong> ${escapeHTML(item.from_date || "")}<br>
+                <strong>Return:</strong> ${escapeHTML(item.to_date || "")}<br>
+                <strong>Status:</strong> ${escapeHTML(item.status || "Pending")}
+            </div>
+        `).join("");
+    } catch (error) {
+        container.textContent = "Could not load applications: " + error.message;
+    }
 }
 
-showMonthlyCount();
+function escapeHTML(value) {
+    return String(value).replace(/[&<>"']/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;",
+        '"': "&quot;", "'": "&#39;"
+    })[char]);
+}
+
+document.getElementById("refreshButton").addEventListener("click", loadMyOutpasses);
+
+document.getElementById("studentId").value = getStudentId();
+document.getElementById("studentId").addEventListener("change", loadMyOutpasses);
+loadMyOutpasses();
 </script></body>
 </html>
