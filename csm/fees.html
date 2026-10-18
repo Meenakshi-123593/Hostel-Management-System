@@ -1,167 +1,200 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hostel Fees Details</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hostel Fees Details</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.payment-section{background:#fff;padding:20px;margin-top:24px;border-radius:10px;box-shadow:0 2px 8px #0001}
+.payment-options{display:flex;flex-wrap:wrap;gap:12px;margin:15px 0}
+.payment-option{padding:12px 16px;border:1px solid #12366b;border-radius:8px;background:white;color:#12366b;cursor:pointer}
+.payment-option.selected{background:#12366b;color:white}
+.pay-button{padding:12px 20px;background:#12366b;color:white;border:0;border-radius:6px;cursor:pointer}
+#paymentMessage{white-space:pre-wrap}
+</style>
 </head>
-
-<body class="fees-page">
-
-<header class="room-header">
-    <h1>Hostel Fees Details</h1>
-    <p>Nehru Group of Institutions | Student Hostel Portal</p>
-</header>
-
-<a href="dashboard.html" class="back-link">← Back to Dashboard</a>
+<body class="fees-page"><header class="room-header">
+<h1>Hostel Fees Details</h1>
+<p>Nehru Group of Institutions | Student Hostel Portal</p>
+</header><a href="dashboard.html" class="back-link">← Back to Dashboard</a>
 
 <main class="fees-content">
-    <h2 class="page-title">Year-wise Fee Details</h2>
+<h2 class="page-title">Year-wise Fee Details</h2>
+<p id="studentInfo">Loading student details...</p><section class="fees-summary">
+<div class="fees-summary-card">
+<h3>Total Course Fees</h3>
+<strong id="totalFees">₹0</strong>
+</div>
+<div class="fees-summary-card">
+<h3>Total Paid</h3>
+<strong id="totalPaid">₹0</strong>
+</div>
+<div class="fees-summary-card">
+<h3>Outstanding Balance</h3>
+<strong id="totalBalance">₹0</strong>
+</div>
+</section><section class="fees-table-container">
+<h2>Fee Details</h2>
+<table class="fees-table">
+<thead>
+<tr>
+<th>College Year</th>
+<th>Total Fees</th>
+<th>Amount Paid</th>
+<th>Balance</th>
+<th>Payment Status</th>
+</tr>
+</thead>
+<tbody id="feesTableBody">
+<tr><td colspan="5">Loading fee records...</td></tr>
+</tbody>
+</table>
+</section><section class="payment-section">
+<h2>Pay Hostel Fees</h2>
+<p>Choose your preferred payment method.</p><label for="paymentAmount">Amount (₹):</label>
+<input id="paymentAmount" type="number" min="1" step="1" placeholder="Enter amount">
 
-    <p id="studentInfo"></p>
+<div class="payment-options">
+<button type="button" class="payment-option selected" data-method="Card">💳 Card</button>
+<button type="button" class="payment-option" data-method="Google Pay">Google Pay</button>
+<button type="button" class="payment-option" data-method="Paytm">Paytm</button>
+<button type="button" class="payment-option" data-method="BHIM UPI">BHIM UPI</button>
+</div><button type="button" class="pay-button" id="payButton">Continue to Payment</button>
 
-    <section class="fees-summary">
-        <div class="fees-summary-card">
-            <h3>Total Course Fees</h3>
-            <strong id="totalFees">₹0</strong>
-        </div>
+<p id="paymentMessage" role="status"></p>
+<p><small>Payments are processed only through a configured payment gateway. Never share your card PIN or UPI PIN on this page.</small></p>
+</section>
+</main><script>
+const API_BASE = "https://hostel-management-system-api-426c.onrender.com";
+let selectedMethod = "Card";
+let currentStudent = null;
+let outstandingBalance = 0;
 
-        <div class="fees-summary-card">
-            <h3>Total Paid</h3>
-            <strong id="totalPaid">₹0</strong>
-        </div>
-
-        <div class="fees-summary-card">
-            <h3>Outstanding Balance</h3>
-            <strong id="totalBalance">₹0</strong>
-        </div>
-    </section>
-
-    <section class="fees-table-container">
-        <h2>Fee Details</h2>
-
-        <table class="fees-table">
-            <thead>
-                <tr>
-                    <th>College Year</th>
-                    <th>Total Fees</th>
-                    <th>Amount Paid</th>
-                    <th>Balance</th>
-                    <th>Payment Status</th>
-                </tr>
-            </thead>
-
-            <tbody id="feesTableBody"></tbody>
-        </table>
-
-        <p class="fees-note">
-            Note: Fee amounts and payment statuses are sample records for demonstration.
-        </p>
-    </section>
-</main>
-
-<script>
-    let student = null;
-
-    try {
-        student = JSON.parse(
-            sessionStorage.getItem("loggedInStudent") ||
-            localStorage.getItem("currentUser") ||
-            "null"
-        );
-    } catch (error) {
-        student = null;
-    }
-
-    const studentInfo = document.getElementById("studentInfo");
-    const tableBody = document.getElementById("feesTableBody");
-
-    function formatRupees(amount) {
-        return "₹" + amount.toLocaleString("en-IN");
-    }
-
-    function getOrdinal(number) {
-        return number === 1 ? "st" :
-               number === 2 ? "nd" :
-               number === 3 ? "rd" : "th";
-    }
-
-    if (!student) {
-        studentInfo.textContent = "Please log in to view your fee details.";
-        tableBody.innerHTML =
-            '<tr><td colspan="5">No student information available.</td></tr>';
-    } else {
-        const studentId = student.student_id || student.studentId || "-";
-        const name = student.name || "-";
-        const yearText = String(student.year || "");
-        const yearMatch = yearText.match(/\d+/);
-        const currentYear = yearMatch ? Number(yearMatch[0]) : 0;
-
-        studentInfo.textContent =
-            "Student: " + name +
-            " | Student ID: " + studentId +
-            " | College Year: " + (student.year || "-");
-
-        if (![1, 2, 3, 4].includes(currentYear)) {
-            tableBody.innerHTML =
-                '<tr><td colspan="5">College year information is missing or invalid. Please check your registration details.</td></tr>';
-        } else {
-            const yearlyFee = 3000;
-            let totalPaid = 0;
-            let totalBalance = 0;
-            let tableHTML = "";
-
-            for (let year = 1; year <= 4; year++) {
-                let paid = 0;
-                let status = "Not Due Yet";
-                let statusClass = "fee-not-started";
-
-                if (year < currentYear) {
-                    paid = yearlyFee;
-                    status = "Fully Paid";
-                    statusClass = "fee-paid";
-                } else if (year === currentYear) {
-                    if (currentYear >= 3) {
-                        paid = 1500;
-                        status = "Partially Paid";
-                        statusClass = "fee-pending";
-                    } else {
-                        paid = yearlyFee;
-                        status = "Fully Paid";
-                        statusClass = "fee-paid";
-                    }
-                }
-
-                const balance = yearlyFee - paid;
-
-                totalPaid += paid;
-                totalBalance += balance;
-
-                tableHTML += `
-                    <tr>
-                        <td>${year}${getOrdinal(year)} Year</td>
-                        <td>${formatRupees(yearlyFee)}</td>
-                        <td>${formatRupees(paid)}</td>
-                        <td>${formatRupees(balance)}</td>
-                        <td><span class="${statusClass}">${status}</span></td>
-                    </tr>
-                `;
-            }
-
-            tableBody.innerHTML = tableHTML;
-
-            document.getElementById("totalFees").textContent =
-                formatRupees(currentYear * yearlyFee);
-
-            document.getElementById("totalPaid").textContent =
-                formatRupees(totalPaid);
-
-            document.getElementById("totalBalance").textContent =
-                formatRupees(totalBalance);
+function getStudent() {
+    for (const store of [sessionStorage, localStorage]) {
+        for (const key of ["loggedInStudent", "currentUser", "student"]) {
+            try {
+                const value = JSON.parse(store.getItem(key) || "null");
+                if (value && typeof value === "object") return value;
+            } catch (_) {}
         }
     }
-</script>
+    return null;
+}
 
-</body>
+function getToken() {
+    for (const key of ["studentToken", "student_token", "token", "authToken", "access_token"]) {
+        const value = sessionStorage.getItem(key) || localStorage.getItem(key);
+        if (value) return value;
+    }
+    return "";
+}
+
+function rupees(amount) {
+    return "₹" + Number(amount || 0).toLocaleString("en-IN");
+}
+
+function ordinal(year) {
+    return year === 1 ? "st" : year === 2 ? "nd" : year === 3 ? "rd" : "th";
+}
+
+function escapeHTML(value) {
+    return String(value ?? "").replace(/[&<>"']/g, c => ({
+        "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+    })[c]);
+}
+
+async function loadFees() {
+    const info = document.getElementById("studentInfo");
+    const body = document.getElementById("feesTableBody");
+    currentStudent = getStudent();
+
+    if (!currentStudent) {
+        info.textContent = "Please log in to view your fee details.";
+        body.innerHTML = '<tr><td colspan="5">Student information is unavailable. Log in again.</td></tr>';
+        return;
+    }
+
+    const studentId = currentStudent.student_id || currentStudent.studentId || currentStudent.id || "";
+    const name = currentStudent.name || currentStudent.student_name || "-";
+    const yearMatch = String(currentStudent.year || currentStudent.academic_year || "").match(/\d+/);
+    const currentYear = yearMatch ? Number(yearMatch[0]) : 0;
+
+    info.textContent = `Student: ${name} | Student ID: ${studentId || "-"} | College Year: ${currentStudent.year || currentStudent.academic_year || "-"}`;
+
+    if (!studentId) {
+        body.innerHTML = '<tr><td colspan="5">Student ID missing. Please log in again.</td></tr>';
+        return;
+    }
+
+    try {
+        const response = await fetch(API_BASE + "/api/fees?student_id=" + encodeURIComponent(studentId), {
+            headers: getToken() ? {"Authorization": "Bearer " + getToken()} : {}
+        });
+        const data = await response.json();
+
+        if (!response.ok) throw new Error(data.error || data.message || "Unable to load fees.");
+
+        const fee = Array.isArray(data) ? data[0] : (data.fees || data.record || data);
+        if (!fee || Array.isArray(fee)) throw new Error("No fee record returned by the server.");
+
+        const total = Number(fee.total_amount ?? fee.total ?? 0);
+        const paid = Number(fee.paid_amount ?? fee.paid ?? 0);
+        outstandingBalance = Math.max(0, total - paid);
+
+        document.getElementById("totalFees").textContent = rupees(total);
+        document.getElementById("totalPaid").textContent = rupees(paid);
+        document.getElementById("totalBalance").textContent = rupees(outstandingBalance);
+        document.getElementById("paymentAmount").value = outstandingBalance || "";
+
+        const feeYear = Number(fee.year || currentYear || 1);
+        body.innerHTML = `
+            <tr>
+                <td>${feeYear}${ordinal(feeYear)} Year</td>
+                <td>${rupees(total)}</td>
+                <td>${rupees(paid)}</td>
+                <td>${rupees(outstandingBalance)}</td>
+                <td>${outstandingBalance === 0 ? "Fully Paid" : paid > 0 ? "Partially Paid" : "Pending"}</td>
+            </tr>`;
+    } catch (error) {
+        body.innerHTML = `<tr><td colspan="5">${escapeHTML(error.message)} Please contact the hostel office if this continues.</td></tr>`;
+    }
+}
+
+document.querySelectorAll(".payment-option").forEach(button => {
+    button.addEventListener("click", () => {
+        document.querySelectorAll(".payment-option").forEach(item => item.classList.remove("selected"));
+        button.classList.add("selected");
+        selectedMethod = button.dataset.method;
+    });
+});
+
+document.getElementById("payButton").addEventListener("click", async () => {
+    const message = document.getElementById("paymentMessage");
+    const amount = Number(document.getElementById("paymentAmount").value);
+
+    if (!currentStudent) {
+        message.textContent = "Please log in before continuing.";
+        return;
+    }
+    if (!Number.isFinite(amount) || amount <= 0) {
+        message.textContent = "Enter a valid payment amount.";
+        return;
+    }
+    if (outstandingBalance > 0 && amount > outstandingBalance) {
+        message.textContent = "Amount cannot exceed the outstanding balance.";
+        return;
+    }
+
+    /*
+      A real payment gateway must be configured before collecting payment.
+      This page intentionally does not claim that money has been paid.
+    */
+    message.textContent =
+        "Selected method: " + selectedMethod +
+        ". Online payment is not yet connected to a payment gateway. No money has been charged. Please contact the hostel office to pay securely.";
+});
+
+loadFees();
+</script></body>
 </html>
