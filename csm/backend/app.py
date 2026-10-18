@@ -359,7 +359,105 @@ def home():
 
 # ==================== REGISTRATION ====================
 
-@app.route("/api/register", methods=["POST", "OPTIONS"])
+@app.route("/api/attendance", methods=["GET", "POST", "OPTIONS"])
+def student_attendance():
+    if request.method == "OPTIONS":
+        return "", 204
+
+    connection = get_db()
+
+    try:
+        if request.method == "POST":
+            data = read_json()
+
+            student_id = str(data.get("student_id", "")).strip()
+            attendance_date = str(
+                data.get("attendance_date", data.get("date", ""))
+            ).strip()
+            status = str(data.get("status", "")).strip().title()
+
+            if not student_id or not attendance_date:
+                return jsonify({
+                    "success": False,
+                    "message": "Student ID and date are required."
+                }), 400
+
+            try:
+                datetime.strptime(attendance_date, "%Y-%m-%d")
+            except ValueError:
+                return jsonify({
+                    "success": False,
+                    "message": "Date must use YYYY-MM-DD format."
+                }), 400
+
+            if status not in ["Present", "Absent"]:
+                return jsonify({
+                    "success": False,
+                    "message": "Choose Present or Absent."
+                }), 400
+
+            student = get_student(connection, student_id)
+
+            if not student:
+                return student_not_found()
+
+            connection.execute("""
+                INSERT INTO attendance (
+                    student_id, student_name, attendance_date, status
+                )
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(student_id, attendance_date)
+                DO UPDATE SET
+                    status = excluded.status,
+                    student_name = excluded.student_name
+            """, (
+                student_id,
+                student["name"],
+                attendance_date,
+                status
+            ))
+
+            connection.commit()
+
+            return jsonify({
+                "success": True,
+                "message": "Attendance saved successfully."
+            }), 201
+
+        student_id = request.args.get("student_id", "").strip()
+
+        if not student_id:
+            return jsonify({
+                "success": False,
+                "message": "Provide student_id."
+            }), 400
+
+        rows = connection.execute("""
+            SELECT *
+            FROM attendance
+            WHERE student_id = ?
+            ORDER BY attendance_date DESC
+        """, (student_id,)).fetchall()
+
+        records = [dict(row) for row in rows]
+
+        return jsonify({
+            "success": True,
+            "attendance": records,
+            "count": len(records)
+        })
+
+    except sqlite3.Error:
+        connection.rollback()
+        app.logger.exception("Student attendance error")
+
+        return jsonify({
+            "success": False,
+            "message": "Could not save or load attendance."
+        }), 500
+
+    finally:
+        connection.close()
 def register():
     if request.method == "OPTIONS":
         return "", 204
